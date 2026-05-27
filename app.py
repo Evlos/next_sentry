@@ -92,8 +92,16 @@ def _extract_stacktrace(payload: dict) -> str | None:
 @app.route("/api/<int:project_id>/store/", methods=["POST"])
 @app.route("/api/<int:project_id>/envelope/", methods=["POST"])
 def sentry_ingest(project_id):
-    """接收 Sentry SDK 发来的事件（兼容 store 和 envelope 格式）"""
+    import traceback
+
+    print(f"\n{'='*60}")
+    print(f"[INGEST] {request.method} {request.path}")
+    print(f"[INGEST] Content-Type     : {request.headers.get('Content-Type', '-')}")
+    print(f"[INGEST] Content-Encoding : {request.headers.get('Content-Encoding', '-')}")
+    print(f"[INGEST] X-Sentry-Auth    : {request.headers.get('X-Sentry-Auth', '-')}")
+
     dsn_key = _extract_dsn_key(request)
+    print(f"[INGEST] Extracted DSN key: {dsn_key}")
 
     db = get_db()
     project = db.execute(
@@ -102,61 +110,127 @@ def sentry_ingest(project_id):
     ).fetchone()
 
     if not project:
+        # 额外打印数据库里实际存的 key，方便比对
+        all_projects = db.execute("SELECT id, name, dsn_key FROM projects").fetchall()
+        print(f"[INGEST] ❌ 鉴权失败！数据库中的项目：")
+        for p in all_projects:
+            print(f"         id={p['id']}  key={p['dsn_key']}  name={p['name']}")
         db.close()
         return jsonify({"error": "Invalid DSN or project"}), 403
 
-    # envelope 格式：多行 JSON（header\n{}\npayload）
-    content_type = request.headers.get("Content-Type", "")
-    if "envelope" in request.path or "x-sentry-envelope" in content_type:
-        raw = request.get_data().decode("utf-8", errors="replace")
-        lines = [l for l in raw.strip().splitlines() if l.strip()]
-        payload = None
-        for line in lines[2:]:  # 跳过 envelope header 和 item header
-            try:
-                payload = json.loads(line)
-                break
-            except Exception:
+    print(f"[INGEST] ✅ 项目匹配：id={project['id']} name={project['name']}")
+
+    # ── 解析 Body ──────────────────────────────────────────
+    raw_bytes = request.get_data()
+    content_encoding = request.headers.get("Content-Encoding", "")
+
+    try:
+        if "gzip" in content_encoding:
+            import gzip
+            raw_bytes = gzip.decompress(raw_bytes)
+            print(f"[INGEST] gzip 解压后长度: {len(raw_bytes)}")
+        elif "deflate" in content_encoding:
+            raw_bytes = zlib.decompress(raw_bytes)
+            print(f"[INGEST] deflate 解压后长度: {len(raw_bytes)}")
+    except Exception as e:
+        print(f"[INGEST] ⚠️  解压失败: {e}")
+
+    raw_text = raw_bytes.decode("utf-8", errors="replace")
+    print(f"[INGEST] Body 长度: {len(raw_text)} chars")
+    print(f"[INGEST] Body 前 500 chars:\n{raw_text[:500]}")
+
+    # ── Envelope 格式解析 ──────────────────────────────────
+    # envelope 结构：每个 item 由两行组成
+    #   行1: item header JSON，如 {"type":"event","length":123}
+    #   行2: item payload JSON
+    # 整体最前面还有一行 envelope header
+    payload = None
+
+    if "envelope" in request.path:
+        lines = raw_text.splitlines()
+        print(f"[INGEST] Envelope 共 {len(lines)} 行")
+        for i, line in enumerate(lines):
+            print(f"[INGEST]   line[{i}]: {line[:120]}")
+
+        # 从第 1 行开始（跳过 envelope header），每两行一组
+        i = 1
+        while i < len(lines):
+            header_line = lines[i].strip()
+            payload_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
+            i += 2
+
+            if not header_line:
                 continue
-        if not payload:
-            db.close()
-            return jsonify({"id": str(uuid.uuid4())}), 200
+
+            try:
+                item_header = json.loads(header_line)
+            except Exception:
+                print(f"[INGEST]   ⚠️  item header 解析失败: {header_line[:80]}")
+                continue
+
+            item_type = item_header.get("type", "")
+            print(f"[INGEST]   item type: {item_type}")
+
+            if item_type == "event" and payload_line:
+                try:
+                    payload = json.loads(payload_line)
+                    print(f"[INGEST]   ✅ event payload 解析成功，keys: {list(payload.keys())}")
+                    break
+                except Exception as e:
+                    print(f"[INGEST]   ❌ event payload 解析失败: {e}")
+                    print(f"[INGEST]      payload_line: {payload_line[:200]}")
     else:
-        payload = _decompress_body(request)
-        if not payload:
-            db.close()
-            return jsonify({"error": "Could not parse body"}), 400
+        # store 格式：直接是 JSON
+        try:
+            payload = json.loads(raw_text)
+            print(f"[INGEST] store payload 解析成功，keys: {list(payload.keys())}")
+        except Exception as e:
+            print(f"[INGEST] ❌ store payload 解析失败: {e}")
 
-    title = _build_title(payload)
-    stacktrace = _extract_stacktrace(payload)
-    req_data = json.dumps(payload.get("request", {})) if payload.get("request") else None
-    tags = json.dumps(payload.get("tags", {}))
-    extra = json.dumps(payload.get("extra", {}))
+    if not payload:
+        print(f"[INGEST] ⚠️  payload 为空，跳过存储（非 event 类型 item 属正常，如 session/transaction）")
+        db.close()
+        return jsonify({"id": str(uuid.uuid4())}), 200
 
-    db.execute("""
-        INSERT INTO events
-            (project_id, event_id, level, title, message, culprit, platform,
-             environment, release, stacktrace, request_data, extra, tags)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        project_id,
-        payload.get("event_id", str(uuid.uuid4())),
-        payload.get("level", "error"),
-        title,
-        json.dumps(payload.get("message", "")),
-        payload.get("culprit", ""),
-        payload.get("platform", "python"),
-        payload.get("environment", "production"),
-        payload.get("release", ""),
-        stacktrace,
-        req_data,
-        extra,
-        tags,
-    ))
-    db.commit()
-    db.close()
+    # ── 存储 ───────────────────────────────────────────────
+    try:
+        title = _build_title(payload)
+        stacktrace = _extract_stacktrace(payload)
+        req_data = json.dumps(payload.get("request", {})) if payload.get("request") else None
+        tags = json.dumps(payload.get("tags", {}))
+        extra = json.dumps(payload.get("extra", {}))
+
+        print(f"[INGEST] 准备写入: level={payload.get('level')} title={title[:80]}")
+
+        db.execute("""
+            INSERT INTO events
+                (project_id, event_id, level, title, message, culprit, platform,
+                 environment, release, stacktrace, request_data, extra, tags)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            project_id,
+            payload.get("event_id", str(uuid.uuid4())),
+            payload.get("level", "error"),
+            title,
+            json.dumps(payload.get("message", "")),
+            payload.get("culprit", ""),
+            payload.get("platform", "python"),
+            payload.get("environment", "production"),
+            payload.get("release", ""),
+            stacktrace,
+            req_data,
+            extra,
+            tags,
+        ))
+        db.commit()
+        print(f"[INGEST] ✅ 事件写入成功！")
+    except Exception as e:
+        print(f"[INGEST] ❌ 写入数据库失败: {e}")
+        traceback.print_exc()
+    finally:
+        db.close()
 
     return jsonify({"id": payload.get("event_id", str(uuid.uuid4()))}), 200
-
 
 # ──────────────────────────────────────────────
 # 管理界面路由
