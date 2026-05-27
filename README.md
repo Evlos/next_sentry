@@ -2,9 +2,8 @@
 
 A lightweight, self-hosted error tracking server compatible with the Sentry SDK — built with Flask and SQLite, zero external dependencies.
 
-[![Docker Image](https://ghcr.io/badges/static/v1?label=ghcr.io&message=next_sentry&color=6d28d9)](https://github.com/evlos/next_sentry/pkgs/container/next_sentry)
 [![CI](https://github.com/evlos/next_sentry/actions/workflows/docker.yml/badge.svg)](https://github.com/evlos/next_sentry/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: GPL](https://img.shields.io/badge/License-GPL-yellow.svg)](LICENSE)
 
 ---
 
@@ -27,7 +26,7 @@ A lightweight, self-hosted error tracking server compatible with the Sentry SDK 
 docker run -d \
   -p 5000:5000 \
   -v $(pwd)/data:/app/data \
-  -e DB_PATH=/app/data/mini_sentry.db \
+  -e DB_PATH=/app/data/next_sentry.db \
   --name next_sentry \
   ghcr.io/evlos/next_sentry:latest
 ```
@@ -95,7 +94,7 @@ next_sentry/
 
 | Variable | Default | Description |
 |---|---|---|
-| `DB_PATH` | `data/mini_sentry.db` | SQLite database file path |
+| `DB_PATH` | `data/next_sentry.db` | SQLite database file path |
 | `FLASK_ENV` | `production` | Flask environment |
 | `PORT` | `5000` | Listening port |
 

@@ -17,7 +17,7 @@ COPY . .
 # 数据目录（SQLite 文件挂载点）
 RUN mkdir -p /app/data
 
-ENV DB_PATH=/app/data/mini_sentry.db
+ENV DB_PATH=/app/data/next_sentry.db
 ENV FLASK_ENV=production
 ENV PORT=5000
 

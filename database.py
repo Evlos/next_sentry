@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-DB_PATH = os.environ.get("DB_PATH", "data/mini_sentry.db")
+DB_PATH = os.environ.get("DB_PATH", "data/next_sentry.db")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
