@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Mini Sentry 异常上报测试脚本
+Next Sentry 异常上报测试脚本
 使用方式：
     DSN=http://<key>@localhost:5000/api/<id> python test_report.py
     DSN=http://<key>@localhost:5000/api/<id> python test_report.py --case 3
@@ -25,7 +25,7 @@ sentry_sdk.init(
     dsn=DSN,
     traces_sample_rate=1.0,
     environment="testing",
-    release="mini-sentry-test@1.0.0",
+    release="next-sentry-test@1.0.0",
     # 关闭默认去重，保证每次测试都能上报
     before_send=lambda event, hint: event,
 )
@@ -179,7 +179,7 @@ CASES = {
 # ══════════════════════════════════════════════════════════
 
 def main():
-    parser = argparse.ArgumentParser(description="Mini Sentry 上报测试")
+    parser = argparse.ArgumentParser(description="Next Sentry 上报测试")
     parser.add_argument(
         "--case", type=int, default=0,
         help="指定单个用例编号 (1-10)，不填则运行全部"
@@ -211,7 +211,7 @@ def main():
     # 确保所有事件在进程退出前 flush 完毕
     print("⏳  等待事件 flush ...")
     sentry_sdk.flush(timeout=5)
-    print("🎉  全部测试完成！请刷新 Mini Sentry 查看结果。")
+    print("🎉  全部测试完成！请刷新 Next Sentry 查看结果。")
 
 
 if __name__ == "__main__":

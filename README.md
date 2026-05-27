@@ -7,6 +7,12 @@ A lightweight, self-hosted error tracking server compatible with the Sentry SDK 
 
 ---
 
+## Preview
+
+![Preview](https://github.com/Evlos/uploads/blob/main/Next%20Sentry%20%E2%80%94%20test%20-%20Google%20Chrome_2026-05-27_22-50-25.jpg?raw=true)
+
+---
+
 ## ✨ Features
 
 - 📦 **Drop-in Sentry SDK compatible** — works with any language/framework that supports the Sentry protocol

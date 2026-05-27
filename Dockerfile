@@ -1,8 +1,8 @@
 FROM python:3.12-alpine
 
-LABEL org.opencontainers.image.source="https://github.com/evlos/mini-sentry"
+LABEL org.opencontainers.image.source="https://github.com/evlos/next_sentry"
 LABEL org.opencontainers.image.description="Lightweight self-hosted Sentry-compatible error tracker"
-LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.licenses="GPL"
 
 # 安装编译依赖（Alpine 下 gevent/greenlet 等可能需要，此处仅 flask+gunicorn 则无需）
 RUN apk add --no-cache gcc musl-dev libffi-dev

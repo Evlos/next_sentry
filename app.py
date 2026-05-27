@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, a
 from database import get_db, init_db
 
 app = Flask(__name__)
-app.secret_key = "mini-sentry-secret"
+app.secret_key = "next-sentry-secret"
 
 # ──────────────────────────────────────────────
 # 工具函数

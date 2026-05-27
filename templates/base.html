@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini Sentry{% block title %}{% endblock %}</title>
+  <title>Next Sentry{% block title %}{% endblock %}</title>
   <script>
     // 在页面渲染前立即读取 localStorage，避免闪烁
     (function () {
       console.log('[Theme] init: reading localStorage');
-      const theme = localStorage.getItem('mini-sentry-theme');
+      const theme = localStorage.getItem('next-sentry-theme');
       if (theme === 'light') {
         document.documentElement.classList.remove('dark');
         console.log('[Theme] init: applied light');
@@ -46,7 +46,7 @@
     <!-- 左侧 Logo -->
     <div class="flex items-center gap-4">
       <a href="/" class="text-violet-600 dark:text-violet-400 font-bold text-lg tracking-tight">
-        ⬡ Mini Sentry
+        ⬡ Next Sentry
       </a>
       <span class="text-zinc-500 dark:text-zinc-600 text-sm hidden sm:inline">
         self-hosted error tracker
@@ -83,7 +83,7 @@
   </main>
 
   <script>
-    const STORAGE_KEY = 'mini-sentry-theme';
+    const STORAGE_KEY = 'next-sentry-theme';
 
     function applyTheme(theme) {
       console.log('[Theme] applyTheme:', theme);
