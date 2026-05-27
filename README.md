@@ -101,6 +101,6 @@ next_sentry/
 
 ---
 
-## License
+## 📄 License
 
-MIT
+This project is open-sourced under the [GNU General Public License v3.0](LICENSE).
