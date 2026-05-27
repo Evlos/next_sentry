@@ -1,21 +1,110 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh" class="dark">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mini Sentry{% block title %}{% endblock %}</title>
+  <script>
+    // 在页面渲染前立即读取 localStorage，避免闪烁
+    (function () {
+      const theme = localStorage.getItem('mini-sentry-theme');
+      if (theme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
   <style>
     .mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    #theme-toggle svg { transition: transform 0.3s ease, opacity 0.3s ease; }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen">
-  <nav class="border-b border-zinc-800 px-6 py-4 flex items-center gap-4">
-    <a href="/" class="text-violet-400 font-bold text-lg tracking-tight">⬡ Mini Sentry</a>
-    <span class="text-zinc-600 text-sm">self-hosted error tracker</span>
+
+<body class="bg-zinc-950 dark:bg-zinc-950 light:bg-white text-zinc-100 dark:text-zinc-100
+             min-h-screen transition-colors duration-200
+             dark:[color-scheme:dark]
+             bg-white dark:bg-zinc-950
+             text-zinc-800 dark:text-zinc-100">
+
+  <nav class="border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-between">
+    <!-- 左侧 Logo -->
+    <div class="flex items-center gap-4">
+      <a href="/" class="text-violet-600 dark:text-violet-400 font-bold text-lg tracking-tight">
+        ⬡ Mini Sentry
+      </a>
+      <span class="text-zinc-400 dark:text-zinc-600 text-sm hidden sm:inline">
+        self-hosted error tracker
+      </span>
+    </div>
+
+    <!-- 右上角主题切换按钮 -->
+    <button id="theme-toggle" onclick="toggleTheme()"
+      class="flex items-center gap-2 px-3 py-1.5 rounded-lg border
+             border-zinc-200 dark:border-zinc-700
+             bg-zinc-100 dark:bg-zinc-800
+             text-zinc-600 dark:text-zinc-400
+             hover:border-violet-400 dark:hover:border-violet-500
+             hover:text-violet-600 dark:hover:text-violet-300
+             transition text-sm select-none"
+      title="切换主题">
+      <!-- 暗色模式图标：月亮（在 light 模式下显示，点击切换到 dark） -->
+      <svg id="icon-moon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"/>
+      </svg>
+      <!-- 亮色模式图标：太阳（在 dark 模式下显示，点击切换到 light） -->
+      <svg id="icon-sun" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07-6.07-.71.71M6.34 17.66l-.71.71
+             M17.66 17.66l.71.71M6.34 6.34l.71.71M12 7a5 5 0 100 10A5 5 0 0012 7z"/>
+      </svg>
+      <span id="theme-label" class="text-xs font-medium mono"></span>
+    </button>
   </nav>
+
   <main class="max-w-6xl mx-auto px-6 py-8">
     {% block content %}{% endblock %}
   </main>
+
+  <script>
+    // ── 主题工具函数 ──────────────────────────────
+    const STORAGE_KEY = 'mini-sentry-theme';
+
+    function applyTheme(theme) {
+      const isDark = theme === 'dark';
+      document.documentElement.classList.toggle('dark', isDark);
+
+      // 图标：dark 模式显示太阳（可切到 light），light 模式显示月亮（可切到 dark）
+      document.getElementById('icon-sun').style.display  = isDark ? 'block' : 'none';
+      document.getElementById('icon-moon').style.display = isDark ? 'none'  : 'block';
+      document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
+
+      // body 背景/文字色（Tailwind CDN 动态模式补充）
+      document.body.classList.toggle('bg-zinc-950', isDark);
+      document.body.classList.toggle('text-zinc-100', isDark);
+      document.body.classList.toggle('bg-zinc-50',  !isDark);
+      document.body.classList.toggle('text-zinc-800', !isDark);
+    }
+
+    function toggleTheme() {
+      const current = localStorage.getItem(STORAGE_KEY) || 'dark';
+      const next = current === 'dark' ? 'light' : 'dark';
+      localStorage.setItem(STORAGE_KEY, next);
+      applyTheme(next);
+    }
+
+    // 页面加载时同步图标状态（因为 HTML 已在 <head> 里设置了 class，这里只需同步 UI）
+    (function () {
+      const saved = localStorage.getItem(STORAGE_KEY) || 'dark';
+      applyTheme(saved);
+    })();
+  </script>
 </body>
 </html>
