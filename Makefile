@@ -5,4 +5,4 @@ repomix:
 	repomix --include "*.py,templates/**" -o next_sentry.xml
 
 test:
-	DSN="http://1d8a70a5f11144a29150c34ad779f425@192.168.233.107:30808/1" python test_report.py
+	DSN="http://c692807c97a1472ea062eb8e18f9a98a@192.168.233.107:30808/1" python test_report.py

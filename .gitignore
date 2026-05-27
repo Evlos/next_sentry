@@ -2,3 +2,4 @@ exportplan.md
 __pycache__/
 *.db
 data/
+*.xml

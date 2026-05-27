@@ -7,11 +7,14 @@
   <script>
     // 在页面渲染前立即读取 localStorage，避免闪烁
     (function () {
+      console.log('[Theme] init: reading localStorage');
       const theme = localStorage.getItem('mini-sentry-theme');
       if (theme === 'light') {
         document.documentElement.classList.remove('dark');
+        console.log('[Theme] init: applied light');
       } else {
         document.documentElement.classList.add('dark');
+        console.log('[Theme] init: applied dark');
       }
     })();
   </script>
@@ -27,19 +30,25 @@
   </style>
 </head>
 
-<body class="bg-zinc-950 dark:bg-zinc-950 light:bg-white text-zinc-100 dark:text-zinc-100
+<!--
+  修复说明：
+  1. 移除了互相冲突的静态 bg-zinc-950 / bg-white / text-zinc-100 / text-zinc-800
+  2. 全部改为 dark: 变体，由 <html class="dark"> 控制
+  3. 移除了无效的 light: 前缀（Tailwind 不支持）
+-->
+<body class="bg-white dark:bg-zinc-950
+             text-zinc-800 dark:text-zinc-100
              min-h-screen transition-colors duration-200
-             dark:[color-scheme:dark]
-             bg-white dark:bg-zinc-950
-             text-zinc-800 dark:text-zinc-100">
+             dark:[color-scheme:dark]">
 
-  <nav class="border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-between">
+  <nav class="border-b border-zinc-300 dark:border-zinc-800 px-6 py-4 flex items-center justify-between
+              bg-white dark:bg-zinc-950">
     <!-- 左侧 Logo -->
     <div class="flex items-center gap-4">
       <a href="/" class="text-violet-600 dark:text-violet-400 font-bold text-lg tracking-tight">
         ⬡ Mini Sentry
       </a>
-      <span class="text-zinc-400 dark:text-zinc-600 text-sm hidden sm:inline">
+      <span class="text-zinc-500 dark:text-zinc-600 text-sm hidden sm:inline">
         self-hosted error tracker
       </span>
     </div>
@@ -47,7 +56,7 @@
     <!-- 右上角主题切换按钮 -->
     <button id="theme-toggle" onclick="toggleTheme()"
       class="flex items-center gap-2 px-3 py-1.5 rounded-lg border
-             border-zinc-200 dark:border-zinc-700
+             border-zinc-300 dark:border-zinc-700
              bg-zinc-100 dark:bg-zinc-800
              text-zinc-600 dark:text-zinc-400
              hover:border-violet-400 dark:hover:border-violet-500
@@ -74,35 +83,39 @@
   </main>
 
   <script>
-    // ── 主题工具函数 ──────────────────────────────
     const STORAGE_KEY = 'mini-sentry-theme';
 
     function applyTheme(theme) {
+      console.log('[Theme] applyTheme:', theme);
       const isDark = theme === 'dark';
+
+      // 核心：只操作 <html> 的 dark class，Tailwind 的 dark: 变体会自动接管所有子元素
       document.documentElement.classList.toggle('dark', isDark);
 
-      // 图标：dark 模式显示太阳（可切到 light），light 模式显示月亮（可切到 dark）
-      document.getElementById('icon-sun').style.display  = isDark ? 'block' : 'none';
-      document.getElementById('icon-moon').style.display = isDark ? 'none'  : 'block';
-      document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
+      // 同步按钮图标和文字
+      const iconSun  = document.getElementById('icon-sun');
+      const iconMoon = document.getElementById('icon-moon');
+      const label    = document.getElementById('theme-label');
 
-      // body 背景/文字色（Tailwind CDN 动态模式补充）
-      document.body.classList.toggle('bg-zinc-950', isDark);
-      document.body.classList.toggle('text-zinc-100', isDark);
-      document.body.classList.toggle('bg-zinc-50',  !isDark);
-      document.body.classList.toggle('text-zinc-800', !isDark);
+      if (iconSun)  iconSun.style.display  = isDark ? 'block' : 'none';
+      if (iconMoon) iconMoon.style.display = isDark ? 'none'  : 'block';
+      if (label)    label.textContent      = isDark ? 'Dark'  : 'Light';
+
+      console.log('[Theme] html classList:', document.documentElement.className);
     }
 
     function toggleTheme() {
       const current = localStorage.getItem(STORAGE_KEY) || 'dark';
       const next = current === 'dark' ? 'light' : 'dark';
+      console.log('[Theme] toggleTheme:', current, '->', next);
       localStorage.setItem(STORAGE_KEY, next);
       applyTheme(next);
     }
 
-    // 页面加载时同步图标状态（因为 HTML 已在 <head> 里设置了 class，这里只需同步 UI）
+    // 页面加载时同步图标状态
     (function () {
       const saved = localStorage.getItem(STORAGE_KEY) || 'dark';
+      console.log('[Theme] page load sync, saved theme:', saved);
       applyTheme(saved);
     })();
   </script>
