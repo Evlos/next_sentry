@@ -12,7 +12,7 @@ app = Flask(__name__)
 app.secret_key = "mini-sentry-secret"
 
 # ──────────────────────────────────────────────
-# 只读模式：READ_ONLY=true 时禁止一切写操作
+# 只读模式：READ_ONLY=true 时禁止一切网页端修改操作
 # ──────────────────────────────────────────────
 READ_ONLY = os.environ.get("READ_ONLY", "false").strip().lower() == "true"
 
@@ -148,11 +148,6 @@ def sentry_ingest(project_id):
     print(f"[INGEST] Content-Encoding : {request.headers.get('Content-Encoding', '-')}")
     print(f"[INGEST] X-Sentry-Auth    : {request.headers.get('X-Sentry-Auth', '-')}")
     print(f"[INGEST] READ_ONLY        : {READ_ONLY}")
-
-    # READ_ONLY 模式下不接受新事件写入
-    if READ_ONLY:
-        print(f"[INGEST] ⛔ READ_ONLY=true，拒绝写入事件")
-        return jsonify({"id": str(uuid.uuid4())}), 200
 
     dsn_key = _extract_dsn_key(request)
     print(f"[INGEST] Extracted DSN key: {dsn_key}")
