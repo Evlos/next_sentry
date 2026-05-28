@@ -10,6 +10,7 @@
   </div>
   <div class="flex items-center justify-between">
     <h1 class="text-2xl font-semibold text-zinc-800 dark:text-zinc-100">{{ project.name }}</h1>
+    {% if not read_only %}
     <form method="POST" action="/projects/{{ project.id }}/clear"
           onsubmit="return confirm('Clear all events?')">
       <button class="text-xs text-red-600 dark:text-red-500 hover:text-red-500 dark:hover:text-red-400 border border-red-200 dark:border-red-900
@@ -17,10 +18,12 @@
         Clear All
       </button>
     </form>
+    {% endif %}
   </div>
 </div>
 
 <!-- DSN 配置提示 -->
+{% if not read_only %}
 <div class="bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg p-4 mb-6">
   <div class="text-xs text-zinc-500 dark:text-zinc-400 mb-1 font-medium uppercase tracking-wide">DSN</div>
   <code class="mono text-sm text-violet-600 dark:text-violet-300 break-all">{{ dsn }}</code>
@@ -31,6 +34,12 @@
     </code>
   </div>
 </div>
+{% else %}
+<div class="bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg p-4 mb-6 flex items-center gap-2">
+  <span class="text-xs text-zinc-500 dark:text-zinc-500 uppercase tracking-wide font-medium">🔒 Read-only mode</span>
+  <span class="text-xs text-zinc-400 dark:text-zinc-600">— DSN 已隐藏，事件写入已关闭</span>
+</div>
+{% endif %}
 
 <!-- 筛选 -->
 <div class="flex gap-2 mb-5">

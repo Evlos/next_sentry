@@ -2,15 +2,63 @@ import json
 import uuid
 import zlib
 import base64
+import sys
+import os
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, redirect, url_for, abort
 from database import get_db, init_db
 
 app = Flask(__name__)
-app.secret_key = "next-sentry-secret"
+app.secret_key = "mini-sentry-secret"
 
 # ──────────────────────────────────────────────
-# 工具函数
+# 只读模式：READ_ONLY=true 时禁止一切写操作
+# ──────────────────────────────────────────────
+READ_ONLY = os.environ.get("READ_ONLY", "false").strip().lower() == "true"
+
+def _get_dsn_for_project(project, host: str) -> str:
+    """根据 project row 和当前 host 拼出 DSN 字符串"""
+    return f"http://{project['dsn_key']}@{host}/api/{project['id']}"
+
+def _startup_tasks():
+    """
+    应用启动时执行：
+    1. 打印所有项目的 DSN
+    2. 若 READ_ONLY=true，则清空所有项目的事件
+    """
+    print("\n" + "=" * 60)
+    print("[STARTUP] Mini Sentry 启动")
+    print(f"[STARTUP] READ_ONLY 模式: {READ_ONLY}")
+
+    db = get_db()
+    projects = db.execute("SELECT * FROM projects ORDER BY id ASC").fetchall()
+
+    if not projects:
+        print("[STARTUP] 当前没有任何项目")
+    else:
+        print(f"[STARTUP] 共 {len(projects)} 个项目，DSN 列表：")
+        # 尝试从环境变量读取 HOST，方便容器场景下输出正确地址
+        host_hint = os.environ.get("SENTRY_HOST", "localhost:5000")
+        for p in projects:
+            dsn = f"http://{p['dsn_key']}@{host_hint}/api/{p['id']}"
+            print(f"[STARTUP]   [{p['id']}] {p['name']:<20}  DSN: {dsn}")
+
+    if READ_ONLY:
+        print("[STARTUP] READ_ONLY=true，正在清空所有项目的事件...")
+        deleted_total = 0
+        for p in projects:
+            result = db.execute("DELETE FROM events WHERE project_id = ?", (p['id'],))
+            deleted_total += result.rowcount
+            print(f"[STARTUP]   清空项目 [{p['id']}] {p['name']}，删除 {result.rowcount} 条事件")
+        db.commit()
+        print(f"[STARTUP] 清空完成，共删除 {deleted_total} 条事件")
+
+    db.close()
+    print("=" * 60 + "\n")
+
+
+# ──────────────────────────────────────────────
+# 工具函数（不变）
 # ──────────────────────────────────────────────
 
 def _parse_sentry_auth(auth_header: str) -> dict:
@@ -86,7 +134,7 @@ def _extract_stacktrace(payload: dict) -> str | None:
 
 
 # ──────────────────────────────────────────────
-# Sentry SDK 兼容接收端点
+# Sentry SDK 兼容接收端点（只读模式下仍然允许接收，因为 ingest 是写事件，不是 clear）
 # ──────────────────────────────────────────────
 
 @app.route("/api/<int:project_id>/store/", methods=["POST"])
@@ -99,6 +147,12 @@ def sentry_ingest(project_id):
     print(f"[INGEST] Content-Type     : {request.headers.get('Content-Type', '-')}")
     print(f"[INGEST] Content-Encoding : {request.headers.get('Content-Encoding', '-')}")
     print(f"[INGEST] X-Sentry-Auth    : {request.headers.get('X-Sentry-Auth', '-')}")
+    print(f"[INGEST] READ_ONLY        : {READ_ONLY}")
+
+    # READ_ONLY 模式下不接受新事件写入
+    if READ_ONLY:
+        print(f"[INGEST] ⛔ READ_ONLY=true，拒绝写入事件")
+        return jsonify({"id": str(uuid.uuid4())}), 200
 
     dsn_key = _extract_dsn_key(request)
     print(f"[INGEST] Extracted DSN key: {dsn_key}")
@@ -110,7 +164,6 @@ def sentry_ingest(project_id):
     ).fetchone()
 
     if not project:
-        # 额外打印数据库里实际存的 key，方便比对
         all_projects = db.execute("SELECT id, name, dsn_key FROM projects").fetchall()
         print(f"[INGEST] ❌ 鉴权失败！数据库中的项目：")
         for p in all_projects:
@@ -120,7 +173,6 @@ def sentry_ingest(project_id):
 
     print(f"[INGEST] ✅ 项目匹配：id={project['id']} name={project['name']}")
 
-    # ── 解析 Body ──────────────────────────────────────────
     raw_bytes = request.get_data()
     content_encoding = request.headers.get("Content-Encoding", "")
 
@@ -139,11 +191,6 @@ def sentry_ingest(project_id):
     print(f"[INGEST] Body 长度: {len(raw_text)} chars")
     print(f"[INGEST] Body 前 500 chars:\n{raw_text[:500]}")
 
-    # ── Envelope 格式解析 ──────────────────────────────────
-    # envelope 结构：每个 item 由两行组成
-    #   行1: item header JSON，如 {"type":"event","length":123}
-    #   行2: item payload JSON
-    # 整体最前面还有一行 envelope header
     payload = None
 
     if "envelope" in request.path:
@@ -152,7 +199,6 @@ def sentry_ingest(project_id):
         for i, line in enumerate(lines):
             print(f"[INGEST]   line[{i}]: {line[:120]}")
 
-        # 从第 1 行开始（跳过 envelope header），每两行一组
         i = 1
         while i < len(lines):
             header_line = lines[i].strip()
@@ -180,7 +226,6 @@ def sentry_ingest(project_id):
                     print(f"[INGEST]   ❌ event payload 解析失败: {e}")
                     print(f"[INGEST]      payload_line: {payload_line[:200]}")
     else:
-        # store 格式：直接是 JSON
         try:
             payload = json.loads(raw_text)
             print(f"[INGEST] store payload 解析成功，keys: {list(payload.keys())}")
@@ -192,7 +237,6 @@ def sentry_ingest(project_id):
         db.close()
         return jsonify({"id": str(uuid.uuid4())}), 200
 
-    # ── 存储 ───────────────────────────────────────────────
     try:
         title = _build_title(payload)
         stacktrace = _extract_stacktrace(payload)
@@ -232,6 +276,7 @@ def sentry_ingest(project_id):
 
     return jsonify({"id": payload.get("event_id", str(uuid.uuid4()))}), 200
 
+
 # ──────────────────────────────────────────────
 # 管理界面路由
 # ──────────────────────────────────────────────
@@ -247,10 +292,13 @@ def index():
         ORDER BY p.created_at DESC
     """).fetchall()
     db.close()
-    return render_template("index.html", projects=projects)
+    return render_template("index.html", projects=projects, read_only=READ_ONLY)
 
 @app.route("/projects/create", methods=["POST"])
 def create_project():
+    if READ_ONLY:
+        print(f"[CREATE_PROJECT] ⛔ READ_ONLY=true，拒绝创建项目")
+        return jsonify({"error": "Read-only mode"}), 403
     name = request.form.get("name", "").strip()
     if not name:
         return redirect(url_for("index"))
@@ -259,8 +307,9 @@ def create_project():
     try:
         db.execute("INSERT INTO projects (name, dsn_key) VALUES (?, ?)", (name, dsn_key))
         db.commit()
-    except Exception:
-        pass
+        print(f"[CREATE_PROJECT] 创建项目: name={name} dsn_key={dsn_key}")
+    except Exception as e:
+        print(f"[CREATE_PROJECT] 失败: {e}")
     db.close()
     return redirect(url_for("index"))
 
@@ -285,7 +334,15 @@ def project_detail(project_id):
 
     host = request.host
     dsn = f"http://{project['dsn_key']}@{host}/api/{project_id}"
-    return render_template("project_detail.html", project=project, events=events, dsn=dsn, level_filter=level_filter)
+    print(f"[PROJECT_DETAIL] project_id={project_id} read_only={READ_ONLY} events={len(events)}")
+    return render_template(
+        "project_detail.html",
+        project=project,
+        events=events,
+        dsn=dsn,
+        level_filter=level_filter,
+        read_only=READ_ONLY,
+    )
 
 @app.route("/projects/<int:project_id>/events/<int:event_db_id>")
 def event_detail(project_id, event_db_id):
@@ -298,25 +355,40 @@ def event_detail(project_id, event_db_id):
     db.close()
     if not event:
         abort(404)
-    return render_template("event_detail.html", event=event, project=project)
+    print(f"[EVENT_DETAIL] event_id={event_db_id} read_only={READ_ONLY}")
+    return render_template("event_detail.html", event=event, project=project, read_only=READ_ONLY)
 
 @app.route("/projects/<int:project_id>/events/<int:event_db_id>/delete", methods=["POST"])
 def delete_event(project_id, event_db_id):
+    if READ_ONLY:
+        print(f"[DELETE_EVENT] ⛔ READ_ONLY=true，拒绝删除 event_id={event_db_id}")
+        return jsonify({"error": "Read-only mode"}), 403
     db = get_db()
     db.execute("DELETE FROM events WHERE id = ? AND project_id = ?", (event_db_id, project_id))
     db.commit()
     db.close()
+    print(f"[DELETE_EVENT] 删除事件 event_id={event_db_id} project_id={project_id}")
     return redirect(url_for("project_detail", project_id=project_id))
 
 @app.route("/projects/<int:project_id>/clear", methods=["POST"])
 def clear_events(project_id):
+    if READ_ONLY:
+        print(f"[CLEAR_EVENTS] ⛔ READ_ONLY=true，拒绝清空 project_id={project_id}")
+        return jsonify({"error": "Read-only mode"}), 403
     db = get_db()
-    db.execute("DELETE FROM events WHERE project_id = ?", (project_id,))
+    result = db.execute("DELETE FROM events WHERE project_id = ?", (project_id,))
     db.commit()
     db.close()
+    print(f"[CLEAR_EVENTS] 清空 project_id={project_id}，删除 {result.rowcount} 条事件")
     return redirect(url_for("project_detail", project_id=project_id))
 
 
+# ──────────────────────────────────────────────
+# 启动
+# ──────────────────────────────────────────────
+
 init_db()
+_startup_tasks()
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
