@@ -353,6 +353,11 @@ def event_detail(project_id, event_db_id):
     print(f"[EVENT_DETAIL] event_id={event_db_id} read_only={READ_ONLY}")
     return render_template("event_detail.html", event=event, project=project, read_only=READ_ONLY)
 
+@app.errorhandler(404)
+def not_found(e):
+    """未匹配路由 / 已删除资源走统一的 404 页面"""
+    return render_template("404.html", read_only=READ_ONLY), 404
+
 @app.route("/projects/<int:project_id>/events/<int:event_db_id>/delete", methods=["POST"])
 def delete_event(project_id, event_db_id):
     if READ_ONLY:

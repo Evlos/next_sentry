@@ -1,45 +1,99 @@
 {% extends "base.html" %}
-{% block title %} — Projects{% endblock %}
+{% block title %} · Projects{% endblock %}
+
 {% block content %}
-<div class="flex items-center justify-between mb-8">
-  <h1 class="text-2xl font-semibold text-zinc-800 dark:text-zinc-100">Projects</h1>
-  <form method="POST" action="/projects/create" class="flex gap-2">
-    <input name="name" required placeholder="New project name"
-      class="bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100
-             placeholder-zinc-500 focus:outline-none focus:border-violet-500 w-56"/>
-    <button type="submit"
-      class="bg-violet-600 hover:bg-violet-500 text-white text-sm px-4 py-2 rounded transition">
-      + Create
+<div class="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="text-2xl font-semibold tracking-tight text-ink sm:text-[26px]">Projects</h1>
+    <p class="mt-1 text-sm text-muted">
+      {% if projects %}
+        {{ projects|length }} project{% if projects|length != 1 %}s{% endif %}
+        · {{ projects|sum(attribute='event_count') }} event{% if projects|sum(attribute='event_count') != 1 %}s{% endif %} collected
+      {% else %}
+        Create a project to get a DSN and start sending events.
+      {% endif %}
+    </p>
+  </div>
+
+  {% if not read_only|default(false) %}
+  <form method="POST" action="{{ url_for('create_project') }}" class="flex w-full gap-2 sm:w-auto">
+    <input name="name" required maxlength="80" autocomplete="off" placeholder="New project name"
+           class="input sm:w-56" aria-label="Project name"/>
+    <button type="submit" class="btn btn-primary">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      Create
     </button>
   </form>
+  {% endif %}
 </div>
 
 {% if projects %}
-<div class="grid gap-3">
+<div class="grid gap-3 sm:grid-cols-2">
   {% for p in projects %}
-  <a href="/projects/{{ p.id }}"
-     class="flex items-center justify-between bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800
-            hover:border-violet-600 rounded-lg px-5 py-4 transition group">
-    <div>
-      <div class="font-medium text-zinc-800 dark:text-zinc-100 group-hover:text-violet-600 dark:group-hover:text-violet-300 transition">{{ p.name }}</div>
-      <div class="text-xs text-zinc-500 dark:text-zinc-500 mt-1">Created {{ p.created_at }}</div>
-    </div>
-    <div class="flex items-center gap-3">
-      <span class="{% if p.event_count > 0 %}bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300{% else %}bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400{% endif %}
-                   text-xs font-mono px-2 py-1 rounded-full">
-        {{ p.event_count }} events
+  <a href="{{ url_for('project_detail', project_id=p.id) }}"
+     class="panel group flex items-center gap-4 p-4 transition hover:-translate-y-px hover:border-accent/40 hover:shadow-pop">
+
+    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl
+                 {% if p.event_count > 0 %}bg-rose-500/10 text-rose-500 ring-1 ring-inset ring-rose-500/20
+                 {% else %}bg-raised text-faint ring-1 ring-inset ring-line{% endif %}">
+      {% if p.event_count > 0 %}
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" aria-hidden="true">
+          <path d="M12 8.5v4.2M12 16.4h.01"/>
+          <path d="M10.3 3.9 2.6 17.1A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0Z"/>
+        </svg>
+      {% else %}
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h3.4l2 2.2h7.6a2 2 0 0 1 2 2v8.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/>
+        </svg>
+      {% endif %}
+    </span>
+
+    <span class="min-w-0 flex-1">
+      <span class="block truncate text-[15px] font-medium text-ink transition group-hover:text-accent">{{ p.name }}</span>
+      <span class="mt-1 flex items-center gap-2 text-xs text-faint">
+        <span class="font-mono">#{{ p.id }}</span>
+        <span aria-hidden="true">·</span>
+        <span data-time="{{ p.created_at }}">{{ p.created_at }}</span>
       </span>
-      <svg class="w-4 h-4 text-zinc-400 dark:text-zinc-600 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-      </svg>
-    </div>
+    </span>
+
+    <span class="flex shrink-0 items-center gap-2">
+      <span class="rounded-md px-2 py-0.5 font-mono text-xs font-medium
+                   {% if p.event_count > 0 %}bg-rose-500/10 text-rose-500 ring-1 ring-inset ring-rose-500/20
+                   {% else %}bg-raised text-faint ring-1 ring-inset ring-line{% endif %}">
+        {{ p.event_count }}
+      </span>
+      <svg class="h-4 w-4 text-faint transition group-hover:translate-x-0.5 group-hover:text-accent"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+           stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+    </span>
   </a>
   {% endfor %}
 </div>
 {% else %}
-<div class="text-center py-20 text-zinc-500">
-  <div class="text-4xl mb-3">🪲</div>
-  <div class="text-sm">No projects yet. Create one above.</div>
+<div class="panel flex flex-col items-center px-6 py-16 text-center">
+  <span class="grid h-12 w-12 place-items-center rounded-2xl bg-accent/10 text-accent ring-1 ring-inset ring-accent/20">
+    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h3.4l2 2.2h7.6a2 2 0 0 1 2 2v8.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/>
+    </svg>
+  </span>
+  <h2 class="mt-4 text-base font-semibold text-ink">No projects yet</h2>
+  <p class="mt-1 max-w-sm text-sm text-muted">
+    {% if read_only|default(false) %}
+      This instance runs in read-only mode, so project creation is disabled.
+    {% else %}
+      Create your first project above to receive a DSN, then point a Sentry SDK at it.
+    {% endif %}
+  </p>
+  {% if not read_only|default(false) %}
+  <code class="code mt-5 rounded-lg bg-raised px-3 py-2 text-xs text-muted ring-1 ring-inset ring-line">
+    sentry_sdk.init(dsn="http://…")
+  </code>
+  {% endif %}
 </div>
 {% endif %}
 {% endblock %}

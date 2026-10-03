@@ -19,7 +19,8 @@ A lightweight, self-hosted error tracking server compatible with the Sentry SDK 
 - 🗄️ **SQLite-backed** — no Postgres, no Redis, no external services required
 - 🔍 **Event detail view** — stacktrace, tags, extra context, request data
 - 🎛️ **Level filtering** — filter events by `error`, `warning`, `info`, `debug`
-- 🌓 **Dark / Light theme** — persisted via `localStorage`
+- 🌓 **Dark / Light theme** — follows the OS preference, persisted via `localStorage`
+- 📋 **One-click DSN copy** — copy the DSN or the ready-to-paste `sentry_sdk.init(...)` snippet
 - 🐳 **Multi-arch Docker image** — supports `linux/amd64` and `linux/arm64`
 
 ---
@@ -83,10 +84,11 @@ next_sentry/
 ├── database.py         # SQLite initialization & connection helper
 ├── test_report.py      # SDK compatibility test script
 ├── templates/
-│   ├── base.html       # Base layout with theme switcher
+│   ├── base.html       # Base layout, design tokens, theme switcher
 │   ├── index.html      # Project list
 │   ├── project_detail.html
-│   └── event_detail.html
+│   ├── event_detail.html
+│   └── 404.html
 ├── Dockerfile
 ├── requirements.txt
 └── .github/

@@ -1,42 +1,54 @@
 {% extends "base.html" %}
-{% block title %} — Event Detail{% endblock %}
+{% block title %} · {{ event.title or 'Event' }}{% endblock %}
+
 {% block content %}
 <!-- Breadcrumb -->
-<div class="flex items-center gap-2 text-sm text-zinc-500 mb-6">
-  <a href="/" class="hover:text-violet-600 dark:hover:text-violet-400">Projects</a>
-  <span>/</span>
-  <a href="/projects/{{ project.id }}" class="hover:text-violet-600 dark:hover:text-violet-400">{{ project.name }}</a>
-  <span>/</span>
-  <span class="text-zinc-600 dark:text-zinc-300 mono">{{ event.event_id[:8] if event.event_id else event.id }}</span>
-</div>
+<nav class="mb-4 flex min-w-0 items-center gap-1.5 text-xs text-faint" aria-label="Breadcrumb">
+  <a href="{{ url_for('index') }}" class="transition hover:text-accent">Projects</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ url_for('project_detail', project_id=project.id) }}"
+     class="truncate transition hover:text-accent">{{ project.name }}</a>
+  <span aria-hidden="true">/</span>
+  <span class="truncate font-mono text-muted">{{ ((event.event_id or (event.id|string))[:8]) }}</span>
+</nav>
 
-<!-- Title bar -->
-<div class="flex items-start justify-between mb-6 gap-4">
-  <div>
-    <div class="flex items-center gap-3 mb-2">
-      <span class="text-xs px-2 py-0.5 rounded font-mono font-medium
-        {% if event.level == 'error' or event.level == 'fatal' %}bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 border border-red-200 dark:border-red-900
-        {% elif event.level == 'warning' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-900
-        {% elif event.level == 'info' %}bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400 border border-blue-200 dark:border-blue-900
-        {% else %}bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700{% endif %}">
-        {{ event.level }}
+<!-- Title -->
+<div class="mb-5 flex flex-wrap items-start justify-between gap-4">
+  <div class="min-w-0 flex-1">
+    <div class="mb-2.5 flex flex-wrap items-center gap-2">
+      <span class="level" data-level="{{ event.level }}">{{ event.level }}</span>
+      {% if event.platform %}
+      <span class="rounded-md bg-raised px-1.5 py-0.5 font-mono text-[11px] text-muted ring-1 ring-inset ring-line">
+        {{ event.platform }}
       </span>
-      <span class="text-xs text-zinc-500 dark:text-zinc-500 mono">{{ event.platform }}</span>
-      <span class="text-xs text-zinc-500 dark:text-zinc-500">{{ event.environment }}</span>
+      {% endif %}
+      {% if event.environment %}
+      <span class="rounded-md bg-raised px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-inset ring-line">
+        {{ event.environment }}
+      </span>
+      {% endif %}
       {% if event.release %}
-      <span class="text-xs text-zinc-500 dark:text-zinc-500 mono">@ {{ event.release }}</span>
+      <span class="rounded-md bg-raised px-1.5 py-0.5 font-mono text-[11px] text-muted ring-1 ring-inset ring-line">
+        {{ event.release }}
+      </span>
       {% endif %}
     </div>
-    <h1 class="text-xl font-semibold text-zinc-800 dark:text-zinc-100 font-mono leading-snug break-all">
+    <h1 class="break-words text-xl font-semibold leading-snug tracking-tight text-ink sm:text-2xl">
       {{ event.title or '(no title)' }}
     </h1>
-    <div class="text-sm text-zinc-500 dark:text-zinc-500 mt-1 mono">{{ event.culprit }}</div>
+    {% if event.culprit %}
+    <p class="mt-1.5 break-all font-mono text-xs text-faint">{{ event.culprit }}</p>
+    {% endif %}
   </div>
+
   {% if not read_only %}
-  <form method="POST" action="/projects/{{ project.id }}/events/{{ event.id }}/delete"
-        onsubmit="return confirm('Delete this event?')" class="shrink-0">
-    <button class="text-xs text-red-600 dark:text-red-500 hover:text-red-500 dark:hover:text-red-400 border border-red-200 dark:border-red-900
-                   hover:border-red-400 dark:hover:border-red-700 px-3 py-1.5 rounded transition">
+  <form method="POST" action="{{ url_for('delete_event', project_id=project.id, event_db_id=event.id) }}"
+        onsubmit="return confirm('Delete this event? This cannot be undone.')" class="shrink-0">
+    <button type="submit" class="btn btn-danger">
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 7h16M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7M6.5 7l.8 12.1A2 2 0 0 0 9.3 21h5.4a2 2 0 0 0 2-1.9L17.5 7"/>
+      </svg>
       Delete
     </button>
   </form>
@@ -44,52 +56,137 @@
 </div>
 
 <!-- Meta -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-  {% for label, val in [
-    ('Time', event.created_at),
-    ('Event ID', (event.event_id or '')[:16]),
-    ('Platform', event.platform),
-    ('Environment', event.environment),
-  ] %}
-  <div class="bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-lg px-4 py-3">
-    <div class="text-xs text-zinc-500 dark:text-zinc-500 uppercase tracking-wide mb-1">{{ label }}</div>
-    <div class="text-sm text-zinc-700 dark:text-zinc-200 mono truncate">{{ val }}</div>
+<div class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line-soft shadow-card sm:grid-cols-3 lg:grid-cols-5">
+  <div class="bg-surface px-4 py-3">
+    <div class="eyebrow">Time</div>
+    <div class="mt-1 text-[13px] text-ink" data-time="{{ event.created_at }}"
+         title="{{ event.created_at }}">{{ event.created_at }}</div>
   </div>
+  {% for label, val, mono in [
+      ('Event ID', event.event_id, true),
+      ('Platform', event.platform, true),
+      ('Environment', event.environment, false),
+      ('Release', event.release, true),
+  ] %}
+  {% if val %}
+  <div class="bg-surface px-4 py-3">
+    <div class="eyebrow">{{ label }}</div>
+    <div class="mt-1 truncate text-[13px] text-ink {% if mono %}font-mono{% endif %}"
+         title="{{ val }}">{{ val }}</div>
+  </div>
+  {% endif %}
   {% endfor %}
 </div>
 
-<!-- Stacktrace -->
-{% if event.stacktrace %}
-<div class="mb-5">
-  <div class="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2 font-medium">Stacktrace</div>
-  <pre class="bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-lg p-4 text-xs text-zinc-700 dark:text-zinc-300 mono
-              overflow-x-auto whitespace-pre-wrap leading-relaxed">{{ event.stacktrace }}</pre>
-</div>
-{% endif %}
+<!-- Code sections -->
+{% set sections = [
+  ('Stacktrace', event.stacktrace, false, 'stack'),
+  ('Request',   event.request_data, true, 'json'),
+  ('Tags',      event.tags, true, 'json'),
+  ('Extra',     event.extra, true, 'json'),
+  ('Message',   event.message, true, 'json'),
+] %}
 
-<!-- Request -->
-{% if event.request_data and event.request_data != '{}' %}
-<div class="mb-5">
-  <div class="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2 font-medium">Request</div>
-  <pre class="bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-lg p-4 text-xs text-zinc-700 dark:text-zinc-300 mono
-              overflow-x-auto whitespace-pre-wrap">{{ event.request_data }}</pre>
+<div class="space-y-3">
+  {% for label, body, collapsible, kind in sections %}
+  {% if body and body.strip() not in ('{}', '[]', '""', 'null') %}
+  <details class="panel group" {% if not collapsible %}open{% endif %}>
+    <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 [&::-webkit-details-marker]:hidden">
+      <svg class="h-3.5 w-3.5 shrink-0 text-faint transition group-open:rotate-90" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m9 5 7 7-7 7"/>
+      </svg>
+      <h2 class="eyebrow">{{ label }}</h2>
+      <button type="button" data-copy-target class="btn ml-auto h-7 px-2 py-1 text-xs" title="Copy {{ label }}">
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy
+      </button>
+    </summary>
+    <pre class="panel-code panel-code-scroll !rounded-none !border-0 !border-t !border-line-soft" data-kind="{{ kind }}">{{ body }}</pre>
+  </details>
+  {% endif %}
+  {% endfor %}
 </div>
-{% endif %}
 
-<!-- Tags -->
-{% if event.tags and event.tags != '{}' %}
-<div class="mb-5">
-  <div class="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2 font-medium">Tags</div>
-  <pre class="bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-lg p-4 text-xs text-zinc-700 dark:text-zinc-300 mono">{{ event.tags }}</pre>
+<div class="mt-5">
+  <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn">
+    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
+    Back to {{ project.name }}
+  </a>
 </div>
-{% endif %}
+{% endblock %}
 
-<!-- Extra -->
-{% if event.extra and event.extra != '{}' %}
-<div class="mb-5">
-  <div class="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2 font-medium">Extra</div>
-  <pre class="bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-lg p-4 text-xs text-zinc-700 dark:text-zinc-300 mono
-              overflow-x-auto whitespace-pre-wrap">{{ event.extra }}</pre>
-</div>
-{% endif %}
+{% block scripts %}
+<script>
+  /* 渐进增强：把原始 JSON / stacktrace 文本渲染成带高亮的视图。
+     所有文本都用 textContent 写入，不拼接 innerHTML。 */
+
+  function el(tag, cls, text) {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  const JSON_TOKEN = /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(\btrue\b|\bfalse\b|\bnull\b)/g;
+
+  function renderJson(pre) {
+    let parsed;
+    try {
+      parsed = JSON.parse(pre.textContent);
+    } catch (err) {
+      return false;
+    }
+    const pretty = JSON.stringify(parsed, null, 2);
+    const frag = document.createDocumentFragment();
+    let last = 0;
+    let match;
+    JSON_TOKEN.lastIndex = 0;
+    while ((match = JSON_TOKEN.exec(pretty)) !== null) {
+      if (match.index > last) frag.append(pretty.slice(last, match.index));
+      if (match[1] !== undefined) {
+        frag.append(el('span', match[2] ? 'tok-key' : 'tok-str', match[1]));
+        if (match[2]) frag.append(el('span', 'tok-key', match[2]));
+      } else if (match[3] !== undefined) {
+        frag.append(el('span', 'tok-num', match[3]));
+      } else {
+        frag.append(el('span', 'tok-bool', match[4]));
+      }
+      last = match.index + match[0].length;
+    }
+    frag.append(pretty.slice(last));
+    pre.replaceChildren(frag);
+    return true;
+  }
+
+  function renderStacktrace(pre) {
+    const lines = pre.textContent.split('\n');
+    const frag = document.createDocumentFragment();
+    lines.forEach((line, i) => {
+      let cls = '';
+      if (/^\s*File "/.test(line)) cls = 'tok-frame';
+      else if (i === 0) cls = 'tok-key';
+      frag.append(el('span', cls ? 'ln ' + cls : 'ln', line + (i < lines.length - 1 ? '\n' : '')));
+    });
+    pre.replaceChildren(frag);
+  }
+
+  document.querySelectorAll('.panel-code').forEach((pre) => {
+    if (pre.dataset.kind === 'json') {
+      if (renderJson(pre)) return;
+    }
+    renderStacktrace(pre);
+  });
+
+  /* 复制当前 panel 的代码内容（沿用 base.html 的 data-copy 交互） */
+  document.querySelectorAll('[data-copy-target]').forEach((btn) => {
+    const pre = btn.closest('details')?.querySelector('.panel-code');
+    if (!pre) return;
+    btn.setAttribute('data-copy', pre.textContent);
+  });
+</script>
 {% endblock %}

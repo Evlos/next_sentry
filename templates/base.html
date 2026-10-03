@@ -2,122 +2,378 @@
 <html lang="zh" class="dark">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <title>Next Sentry{% block title %}{% endblock %}</title>
+
   <script>
-    // 在页面渲染前立即读取 localStorage，避免闪烁
+    // 在首帧渲染前套用主题，避免深浅色闪烁
     (function () {
-      console.log('[Theme] init: reading localStorage');
-      const theme = localStorage.getItem('next-sentry-theme');
-      if (theme === 'light') {
-        document.documentElement.classList.remove('dark');
-        console.log('[Theme] init: applied light');
-      } else {
+      try {
+        var saved = localStorage.getItem('next-sentry-theme');
+        var dark = saved
+          ? saved === 'dark'
+          : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', dark);
+      } catch (e) {
         document.documentElement.classList.add('dark');
-        console.log('[Theme] init: applied dark');
       }
     })();
   </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
-    }
+      theme: {
+        extend: {
+          colors: {
+            canvas: 'rgb(var(--c-canvas) / <alpha-value>)',
+            surface: 'rgb(var(--c-surface) / <alpha-value>)',
+            raised: 'rgb(var(--c-raised) / <alpha-value>)',
+            line: 'rgb(var(--c-line) / <alpha-value>)',
+            'line-soft': 'rgb(var(--c-line-soft) / <alpha-value>)',
+            ink: 'rgb(var(--c-ink) / <alpha-value>)',
+            muted: 'rgb(var(--c-ink-2) / <alpha-value>)',
+            faint: 'rgb(var(--c-ink-3) / <alpha-value>)',
+            accent: 'rgb(var(--c-accent) / <alpha-value>)',
+            'accent-2': 'rgb(var(--c-accent-2) / <alpha-value>)',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+          },
+          boxShadow: {
+            card: '0 1px 2px rgb(9 12 20 / 0.04), 0 12px 28px -18px rgb(9 12 20 / 0.35)',
+            pop: '0 2px 4px rgb(9 12 20 / 0.05), 0 18px 40px -20px rgb(9 12 20 / 0.45)',
+          },
+          keyframes: {
+            'fade-up': {
+              from: { opacity: '0', transform: 'translateY(6px)' },
+              to: { opacity: '1', transform: 'none' },
+            },
+          },
+          animation: {
+            'fade-up': 'fade-up 0.28s ease-out both',
+          },
+        },
+      },
+    };
   </script>
+
+  <!-- 主题令牌：所有颜色走 CSS 变量，模板里无需再写 dark: 变体 -->
   <style>
-    .mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
-    #theme-toggle svg { transition: transform 0.3s ease, opacity 0.3s ease; }
+    :root {
+      color-scheme: light;
+      --c-canvas: 246 247 250;
+      --c-surface: 255 255 255;
+      --c-raised: 240 243 247;
+      --c-line: 225 230 237;
+      --c-line-soft: 240 242 246;
+      --c-ink: 20 22 28;
+      --c-ink-2: 86 95 110;
+      --c-ink-3: 137 146 163;
+      --c-accent: 88 74 214;
+      --c-accent-2: 118 98 245;
+    }
+
+    .dark {
+      color-scheme: dark;
+      --c-canvas: 10 11 14;
+      --c-surface: 19 21 26;
+      --c-raised: 28 31 38;
+      --c-line: 40 44 53;
+      --c-line-soft: 28 31 38;
+      --c-ink: 236 238 243;
+      --c-ink-2: 152 160 176;
+      --c-ink-3: 108 116 131;
+      --c-accent: 141 126 255;
+      --c-accent-2: 172 161 255;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* 事件等级令牌：任何带 data-level 的元素都会拿到这组变量，
+       徽标、圆点、筛选器共用同一份配色。 */
+    :root {
+      [data-level="error"], [data-level="fatal"] { --l-fg: 190 24 58;   --l-bg: 255 241 242; --l-line: 254 205 211; }
+      [data-level="warning"]                    { --l-fg: 146 100 8;   --l-bg: 255 249 219; --l-line: 253 224 122; }
+      [data-level="info"]                       { --l-fg: 12 92 158;   --l-bg: 235 245 255; --l-line: 186 219 245; }
+      [data-level="debug"]                      { --l-fg: 71 84 103;   --l-bg: 244 245 247; --l-line: 218 221 228; }
+    }
+
+    .dark {
+      [data-level="error"], [data-level="fatal"] { --l-fg: 253 164 175; --l-bg: 69 10 26;     --l-line: 122 25 45; }
+      [data-level="warning"]                    { --l-fg: 252 211 77;  --l-bg: 56 39 5;      --l-line: 92 68 8; }
+      [data-level="info"]                       { --l-fg: 125 200 255; --l-bg: 8 33 55;       --l-line: 18 61 96; }
+      [data-level="debug"]                      { --l-fg: 165 174 190; --l-bg: 33 37 44;     --l-line: 61 67 78; }
+    }
+  </style>
+
+  <!-- 组件层：用 @apply 收敛重复样式 -->
+  <style type="text/tailwindcss">
+    @layer components {
+      .panel {
+        @apply rounded-2xl border border-line bg-surface shadow-card;
+      }
+
+      .panel-flush {
+        @apply overflow-hidden rounded-2xl border border-line bg-surface shadow-card;
+      }
+
+      .eyebrow {
+        @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-faint;
+      }
+
+      .btn {
+        @apply inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-line
+               bg-surface px-3 py-1.5 text-sm font-medium text-muted
+               transition hover:border-accent/50 hover:text-ink
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2
+               focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-50;
+      }
+
+      .btn-primary {
+        @apply border-transparent bg-accent text-white shadow-sm
+               hover:bg-accent-2 hover:text-white;
+      }
+
+      .btn-danger {
+        @apply border-line bg-surface text-rose-600 hover:border-rose-400 hover:text-rose-500;
+      }
+
+      .btn-icon {
+        @apply h-9 w-9 px-0;
+      }
+
+      .input {
+        @apply w-full rounded-lg border border-line bg-raised px-3 py-2 text-sm text-ink
+               placeholder:text-faint transition
+               focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/25;
+      }
+
+      .chip {
+        @apply inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1
+               text-xs font-medium text-muted capitalize transition
+               hover:border-accent/50 hover:text-ink;
+      }
+
+      .chip-on {
+        @apply border-transparent bg-accent text-white hover:text-white;
+      }
+
+      .code {
+        @apply font-mono text-[13px] text-ink;
+      }
+
+      .panel-code {
+        @apply overflow-x-auto rounded-xl border border-line-soft bg-raised p-4 font-mono text-xs leading-relaxed text-muted;
+      }
+
+      .panel-code-scroll {
+        @apply max-h-[32rem] overflow-auto;
+      }
+
+      .ln {
+        @apply block;
+      }
+
+      .row-link {
+        @apply block px-4 py-3.5 transition hover:bg-raised/70;
+      }
+
+      /* 事件等级徽标：主题只覆盖变量，一套结构通吃所有 level */
+      .level {
+        @apply inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5
+               font-mono text-[11px] font-medium uppercase leading-4 tracking-wide;
+        color: rgb(var(--l-fg, var(--c-ink-2)));
+        background-color: rgb(var(--l-bg, var(--c-raised)));
+        border-color: rgb(var(--l-line, var(--c-line)));
+      }
+
+      .level-dot {
+        @apply h-1.5 w-1.5 shrink-0 rounded-full;
+        background-color: rgb(var(--l-fg, var(--c-ink-3)));
+      }
+
+      /* 语法高亮 token（JSON / stacktrace 由前端渐进增强） */
+      .tok-key { color: rgb(var(--c-accent-2)); }
+      .tok-str { color: rgb(34 160 107); }
+      .dark .tok-str { color: rgb(110 208 160); }
+      .tok-num { color: rgb(200 118 40); }
+      .dark .tok-num { color: rgb(240 168 96); }
+      .tok-bool { color: rgb(160 60 190); }
+      .dark .tok-bool { color: rgb(206 138 255); }
+      .tok-frame { color: rgb(var(--c-ink)); }
+    }
   </style>
 </head>
 
-<!--
-  修复说明：
-  1. 移除了互相冲突的静态 bg-zinc-950 / bg-white / text-zinc-100 / text-zinc-800
-  2. 全部改为 dark: 变体，由 <html class="dark"> 控制
-  3. 移除了无效的 light: 前缀（Tailwind 不支持）
--->
-<body class="bg-white dark:bg-zinc-950
-             text-zinc-800 dark:text-zinc-100
-             min-h-screen transition-colors duration-200
-             dark:[color-scheme:dark]">
+<body class="min-h-screen bg-canvas font-sans text-ink antialiased transition-colors duration-200">
+  <a href="#main"
+     class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg
+            focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:text-white">跳到主要内容</a>
 
-  <nav class="border-b border-zinc-300 dark:border-zinc-800 px-6 py-4 flex items-center justify-between
-              bg-white dark:bg-zinc-950">
-    <!-- 左侧 Logo -->
-    <div class="flex items-center gap-4">
-      <a href="/" class="text-violet-600 dark:text-violet-400 font-bold text-lg tracking-tight">
-        ⬡ Next Sentry
+  <header class="sticky top-0 z-40 border-b border-line bg-canvas/80 backdrop-blur-md">
+    <nav class="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
+      <a href="{{ url_for('index') }}" class="group flex items-center gap-2.5">
+        <span class="grid h-7 w-7 place-items-center rounded-lg bg-accent/10 text-accent ring-1 ring-inset ring-accent/25
+                     transition group-hover:bg-accent/15">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2.2 20.5 7v10L12 21.8 3.5 17V7L12 2.2Zm0 2.31L5.5 8.4v7.2L12 19.49l6.5-3.89V8.4L12 4.51Z"/>
+            <path d="m12 8.2 3.4 2.04v4.07L12 16.35l-3.4-2.04v-4.07L12 8.2Z"/>
+          </svg>
+        </span>
+        <span class="flex items-baseline gap-2">
+          <span class="text-[15px] font-semibold tracking-tight text-ink">Next Sentry</span>
+          <span class="hidden text-[11px] font-medium text-faint sm:inline">self-hosted error tracking</span>
+        </span>
       </a>
-      <span class="text-zinc-500 dark:text-zinc-600 text-sm hidden sm:inline">
-        self-hosted error tracker
-      </span>
-    </div>
 
-    <!-- 右上角主题切换按钮 -->
-    <button id="theme-toggle" onclick="toggleTheme()"
-      class="flex items-center gap-2 px-3 py-1.5 rounded-lg border
-             border-zinc-300 dark:border-zinc-700
-             bg-zinc-100 dark:bg-zinc-800
-             text-zinc-600 dark:text-zinc-400
-             hover:border-violet-400 dark:hover:border-violet-500
-             hover:text-violet-600 dark:hover:text-violet-300
-             transition text-sm select-none"
-      title="切换主题">
-      <!-- 暗色模式图标：月亮（在 light 模式下显示，点击切换到 dark） -->
-      <svg id="icon-moon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"/>
-      </svg>
-      <!-- 亮色模式图标：太阳（在 dark 模式下显示，点击切换到 light） -->
-      <svg id="icon-sun" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07-6.07-.71.71M6.34 17.66l-.71.71
-             M17.66 17.66l.71.71M6.34 6.34l.71.71M12 7a5 5 0 100 10A5 5 0 0012 7z"/>
-      </svg>
-      <span id="theme-label" class="text-xs font-medium mono"></span>
-    </button>
-  </nav>
+      <div class="ml-auto flex items-center gap-2">
+        {% if read_only|default(false) %}
+        <span class="hidden items-center gap-1.5 rounded-lg border border-line bg-raised px-2 py-1
+                     text-[11px] font-medium text-muted sm:inline-flex">
+          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="4" y="10.5" width="16" height="9.5" rx="2"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/>
+          </svg>
+          Read-only
+        </span>
+        {% endif %}
 
-  <main class="max-w-6xl mx-auto px-6 py-8">
+        <button id="theme-toggle" type="button" data-theme-toggle class="btn btn-icon" title="切换主题" aria-label="切换主题">
+          <svg class="theme-icon-dark h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/>
+          </svg>
+          <svg class="theme-icon-light hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.2"/>
+            <path d="M12 2.6v2.1M12 19.3v2.1M21.4 12h-2.1M4.7 12H2.6M18.65 5.35l-1.5 1.5M6.85 17.15l-1.5 1.5M18.65 18.65l-1.5-1.5M6.85 6.85l-1.5-1.5"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main" class="mx-auto max-w-6xl animate-fade-up px-4 py-8 sm:px-6 sm:py-10">
     {% block content %}{% endblock %}
   </main>
 
+  <footer class="mx-auto max-w-6xl px-4 pb-10 pt-2 sm:px-6">
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line-soft pt-5 text-[11px] text-faint">
+      <span class="font-mono">⬡ next_sentry</span>
+      <span aria-hidden="true">·</span>
+      <span>SQLite-backed Sentry-compatible ingest</span>
+    </div>
+  </footer>
+
   <script>
-    const STORAGE_KEY = 'next-sentry-theme';
+    const NS_THEME_KEY = 'next-sentry-theme';
 
     function applyTheme(theme) {
-      console.log('[Theme] applyTheme:', theme);
       const isDark = theme === 'dark';
-
-      // 核心：只操作 <html> 的 dark class，Tailwind 的 dark: 变体会自动接管所有子元素
       document.documentElement.classList.toggle('dark', isDark);
-
-      // 同步按钮图标和文字
-      const iconSun  = document.getElementById('icon-sun');
-      const iconMoon = document.getElementById('icon-moon');
-      const label    = document.getElementById('theme-label');
-
-      if (iconSun)  iconSun.style.display  = isDark ? 'block' : 'none';
-      if (iconMoon) iconMoon.style.display = isDark ? 'none'  : 'block';
-      if (label)    label.textContent      = isDark ? 'Dark'  : 'Light';
-
-      console.log('[Theme] html classList:', document.documentElement.className);
+      document.querySelectorAll('[data-theme-toggle]').forEach((el) => {
+        // 图标表示"点击后会切到哪个主题"：浅色显示月亮，深色显示太阳
+        el.querySelector('.theme-icon-dark')?.classList.toggle('hidden', isDark);
+        el.querySelector('.theme-icon-light')?.classList.toggle('hidden', !isDark);
+      });
     }
 
-    function toggleTheme() {
-      const current = localStorage.getItem(STORAGE_KEY) || 'dark';
-      const next = current === 'dark' ? 'light' : 'dark';
-      console.log('[Theme] toggleTheme:', current, '->', next);
-      localStorage.setItem(STORAGE_KEY, next);
-      applyTheme(next);
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('[data-theme-toggle]')) {
+        const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+        try { localStorage.setItem(NS_THEME_KEY, next); } catch (err) {}
+        applyTheme(next);
+      }
+    });
+
+    // 跨标签页同步主题
+    window.addEventListener('storage', (e) => {
+      if (e.key === NS_THEME_KEY && e.newValue) applyTheme(e.newValue);
+    });
+
+    applyTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+
+    /* ── 复制：任意带 data-copy 的按钮 ───────────────────────── */
+    const COPY_ICON = '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    const DONE_ICON = '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+    async function copyText(text) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (err) {}
+      // 非安全上下文（例如 http:// 内网）回退到 textarea
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        return ok;
+      } catch (err) { return false; }
     }
 
-    // 页面加载时同步图标状态
-    (function () {
-      const saved = localStorage.getItem(STORAGE_KEY) || 'dark';
-      console.log('[Theme] page load sync, saved theme:', saved);
-      applyTheme(saved);
-    })();
+    document.addEventListener('click', (e) => {
+      // 捕获阶段拦截：复制按钮常常位于 <summary> 内，不拦截会顺带折叠/展开面板
+      const btn = e.target.closest('[data-copy]');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const value = btn.getAttribute('data-copy') || '';
+      if (!value) return;
+      const original = btn.innerHTML;
+      copyText(value).then((ok) => {
+        btn.innerHTML = ok ? DONE_ICON + '<span>已复制</span>' : '<span>复制失败</span>';
+        btn.classList.toggle('!text-emerald-600', ok);
+        setTimeout(() => {
+          btn.innerHTML = original;
+          btn.classList.remove('!text-emerald-600');
+        }, 1600);
+      });
+    }, true);
+
+    /* ── 相对时间：SQLite CURRENT_TIMESTAMP 为 UTC ──────────── */
+    function toLocalDate(value) {
+      if (!value) return null;
+      const s = String(value).trim();
+      const d = new Date(/[zZ+]|[+-]\d{2}:?\d{2}$/.test(s) ? s : s.replace(' ', 'T') + 'Z');
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function relativeTime(d) {
+      const diff = (Date.now() - d.getTime()) / 1000;
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+      return Math.floor(diff / 604800) + 'w ago';
+    }
+
+    document.querySelectorAll('[data-time]').forEach((el) => {
+      const d = toLocalDate(el.getAttribute('data-time'));
+      if (!d) return;
+      el.title = d.toLocaleString();
+      el.textContent = relativeTime(d);
+    });
   </script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>
