@@ -2,43 +2,25 @@
 {% block title %} · {{ event.title or 'Event' }}{% endblock %}
 
 {% block content %}
-<!-- Breadcrumb -->
-<nav class="mb-4 flex min-w-0 items-center gap-1.5 text-xs text-faint" aria-label="Breadcrumb">
-  <a href="{{ url_for('index') }}" class="transition hover:text-accent">Projects</a>
-  <span aria-hidden="true">/</span>
+<nav class="mb-5 flex min-w-0 items-center gap-2 font-mono text-[11px] text-faint" aria-label="Breadcrumb">
+  <a href="{{ url_for('index') }}" class="transition-colors hover:text-ink">Projects</a>
+  <span aria-hidden="true" class="text-line">/</span>
   <a href="{{ url_for('project_detail', project_id=project.id) }}"
-     class="truncate transition hover:text-accent">{{ project.name }}</a>
-  <span aria-hidden="true">/</span>
-  <span class="truncate font-mono text-muted">{{ ((event.event_id or (event.id|string))[:8]) }}</span>
+     class="truncate transition-colors hover:text-ink">{{ project.name }}</a>
+  <span aria-hidden="true" class="text-line">/</span>
+  <span class="truncate text-muted">{{ ((event.event_id or (event.id|string))[:8]) }}</span>
 </nav>
 
-<!-- Title -->
-<div class="mb-5 flex flex-wrap items-start justify-between gap-4">
-  <div class="min-w-0 flex-1">
-    <div class="mb-2.5 flex flex-wrap items-center gap-2">
-      <span class="level" data-level="{{ event.level }}">{{ event.level }}</span>
-      {% if event.platform %}
-      <span class="rounded-md bg-raised px-1.5 py-0.5 font-mono text-[11px] text-muted ring-1 ring-inset ring-line">
-        {{ event.platform }}
-      </span>
-      {% endif %}
-      {% if event.environment %}
-      <span class="rounded-md bg-raised px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-inset ring-line">
-        {{ event.environment }}
-      </span>
-      {% endif %}
-      {% if event.release %}
-      <span class="rounded-md bg-raised px-1.5 py-0.5 font-mono text-[11px] text-muted ring-1 ring-inset ring-line">
-        {{ event.release }}
-      </span>
-      {% endif %}
+<!-- 标题：级别以编译器那样的前缀出现，然后是这条事件的原始消息 -->
+<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+  <div class="min-w-0 flex-1" data-level="{{ event.level }}">
+    <div class="mb-2 flex items-center gap-2">
+      <span class="level text-[11px]">{{ event.level }}:</span>
+      <span class="h-px flex-1" style="background-color: rgb(var(--l-line))"></span>
     </div>
-    <h1 class="break-words text-xl font-semibold leading-snug tracking-tight text-ink sm:text-2xl">
+    <h1 class="break-words font-display text-[24px] font-semibold leading-tight tracking-tight text-ink sm:text-[27px]">
       {{ event.title or '(no title)' }}
     </h1>
-    {% if event.culprit %}
-    <p class="mt-1.5 break-all font-mono text-xs text-faint">{{ event.culprit }}</p>
-    {% endif %}
   </div>
 
   {% if not read_only %}
@@ -55,30 +37,30 @@
   {% endif %}
 </div>
 
-<!-- Meta -->
-<div class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line-soft shadow-card sm:grid-cols-3 lg:grid-cols-5">
-  <div class="bg-surface px-4 py-3">
-    <div class="eyebrow">Time</div>
-    <div class="mt-1 text-[13px] text-ink" data-time="{{ event.created_at }}"
-         title="{{ event.created_at }}">{{ event.created_at }}</div>
+<!-- 身份铭牌：所有字段都是数据，所以全部等宽 -->
+<div class="panel mb-5 overflow-hidden">
+  <div class="grid gap-px bg-line-soft sm:grid-cols-2 lg:grid-cols-3">
+    {% for label, val, mono in [
+        ('Time (UTC)',   event.created_at, true),
+        ('Event ID',    event.event_id, true),
+        ('Culprit',     event.culprit, true),
+        ('Platform',    event.platform, true),
+        ('Environment', event.environment, false),
+        ('Release',     event.release, true),
+    ] %}
+    <div class="min-w-0 bg-surface px-4 py-2.5">
+      <div class="label">{{ label }}</div>
+      <div class="mt-0.5 truncate text-[12px] leading-5 {% if mono %}font-mono{% endif %}
+                  {% if val %}text-ink{% else %}text-faint{% endif %}"
+           {% if val %}title="{{ val }}"{% endif %}>
+        {{ val if val else '—' }}
+      </div>
+    </div>
+    {% endfor %}
   </div>
-  {% for label, val, mono in [
-      ('Event ID', event.event_id, true),
-      ('Platform', event.platform, true),
-      ('Environment', event.environment, false),
-      ('Release', event.release, true),
-  ] %}
-  {% if val %}
-  <div class="bg-surface px-4 py-3">
-    <div class="eyebrow">{{ label }}</div>
-    <div class="mt-1 truncate text-[13px] text-ink {% if mono %}font-mono{% endif %}"
-         title="{{ val }}">{{ val }}</div>
-  </div>
-  {% endif %}
-  {% endfor %}
 </div>
 
-<!-- Code sections -->
+<!-- 展开的代码区 -->
 {% set sections = [
   ('Stacktrace', event.stacktrace, false, 'stack'),
   ('Request',   event.request_data, true, 'json'),
@@ -87,42 +69,48 @@
   ('Message',   event.message, true, 'json'),
 ] %}
 
-<div class="space-y-3">
+<div class="space-y-2.5">
   {% for label, body, collapsible, kind in sections %}
   {% if body and body.strip() not in ('{}', '[]', '""', 'null') %}
-  <details class="panel group" {% if not collapsible %}open{% endif %}>
-    <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 [&::-webkit-details-marker]:hidden">
-      <svg class="h-3.5 w-3.5 shrink-0 text-faint transition group-open:rotate-90" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <details class="panel group overflow-hidden" data-level="{{ event.level }}" {% if not collapsible %}open{% endif %}>
+    <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-2 transition-colors hover:bg-raised
+                    [&::-webkit-details-marker]:hidden">
+      <svg class="h-3 w-3 shrink-0 text-faint transition-transform group-open:rotate-90" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="m9 5 7 7-7 7"/>
       </svg>
-      <h2 class="eyebrow">{{ label }}</h2>
-      <button type="button" data-copy-target class="btn ml-auto h-7 px-2 py-1 text-xs" title="Copy {{ label }}">
-        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+      <span class="label text-ink">{{ label }}</span>
+      <span data-lines class="label normal-case tracking-normal"></span>
+      <button type="button" data-copy-target class="btn ml-auto h-6 gap-1 px-1.5 py-0 text-[10px]" title="Copy {{ label|lower }}">
+        <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          <rect x="9" y="9" width="12" height="12" rx="1.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
         </svg>
         Copy
       </button>
     </summary>
-    <pre class="panel-code panel-code-scroll !rounded-none !border-0 !border-t !border-line-soft" data-kind="{{ kind }}">{{ body }}</pre>
+    <div class="listing listing-scroll border-t border-line-soft">
+      <pre class="contents" data-kind="{{ kind }}">{{ body }}</pre>
+    </div>
   </details>
   {% endif %}
   {% endfor %}
 </div>
 
-<div class="mt-5">
-  <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn">
-    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+<div class="mt-6">
+  <a href="{{ url_for('project_detail', project_id=project.id) }}"
+     class="inline-flex items-center gap-1.5 font-mono text-[11px] text-faint transition-colors hover:text-ink">
+    <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
-    Back to {{ project.name }}
+    All events in {{ project.name }}
   </a>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  /* 渐进增强：把原始 JSON / stacktrace 文本渲染成带高亮的视图。
+  /* 渐进增强：把原始文本渲染成带行号栏的代码清单。
+     每行是「行号 + 内容」的网格，长行折行时行号依然对齐。
      所有文本都用 textContent 写入，不拼接 innerHTML。 */
 
   function el(tag, cls, text) {
@@ -133,60 +121,78 @@
   }
 
   const JSON_TOKEN = /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(\btrue\b|\bfalse\b|\bnull\b)/g;
+  const PATH_TOKEN = /("[^"]*")/g;
 
-  function renderJson(pre) {
-    let parsed;
-    try {
-      parsed = JSON.parse(pre.textContent);
-    } catch (err) {
-      return false;
-    }
-    const pretty = JSON.stringify(parsed, null, 2);
+  /* 把一段文本按正则切成高亮 token，逐段追加 */
+  function tokenize(text, re, pick) {
     const frag = document.createDocumentFragment();
-    let last = 0;
-    let match;
-    JSON_TOKEN.lastIndex = 0;
-    while ((match = JSON_TOKEN.exec(pretty)) !== null) {
-      if (match.index > last) frag.append(pretty.slice(last, match.index));
-      if (match[1] !== undefined) {
-        frag.append(el('span', match[2] ? 'tok-key' : 'tok-str', match[1]));
-        if (match[2]) frag.append(el('span', 'tok-key', match[2]));
-      } else if (match[3] !== undefined) {
-        frag.append(el('span', 'tok-num', match[3]));
-      } else {
-        frag.append(el('span', 'tok-bool', match[4]));
-      }
-      last = match.index + match[0].length;
+    let last = 0, m;
+    re.lastIndex = 0;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) frag.append(text.slice(last, m.index));
+      pick(frag, m);
+      last = m.index + m[0].length;
     }
-    frag.append(pretty.slice(last));
-    pre.replaceChildren(frag);
-    return true;
+    frag.append(text.slice(last));
+    return frag;
   }
 
-  function renderStacktrace(pre) {
-    const lines = pre.textContent.split('\n');
+  function jsonLine(text) {
+    return tokenize(text, JSON_TOKEN, (frag, m) => {
+      if (m[1] !== undefined) {
+        frag.append(el('span', m[2] ? 'tok-key' : 'tok-str', m[1]));
+        if (m[2]) frag.append(el('span', 'tok-key', m[2]));
+      } else if (m[3] !== undefined) {
+        frag.append(el('span', 'tok-num', m[3]));
+      } else {
+        frag.append(el('span', 'tok-bool', m[4]));
+      }
+    });
+  }
+
+  function stackLine(text) {
+    return tokenize(text, PATH_TOKEN, (frag, m) => frag.append(el('span', 'tok-path', m[1])));
+  }
+
+  document.querySelectorAll('.listing').forEach((box) => {
+    const pre = box.querySelector('pre');
+    if (!pre) return;
+
+    const raw = pre.textContent;
+    const kind = pre.dataset.kind;
+
+    // JSON 重新缩进后展示；解析失败就按原样逐行显示，不吞掉内容
+    let text = raw;
+    if (kind === 'json') {
+      try { text = JSON.stringify(JSON.parse(raw), null, 2); } catch (err) { /* 原样 */ }
+    }
+    const lines = text.split('\n');
+    while (lines.length > 1 && lines[lines.length - 1].trim() === '') lines.pop();
+
+    // Sentry 从内向外打印栈帧，所以第一个 File "…" 就是异常抛出的位置
+    let raised = false;
     const frag = document.createDocumentFragment();
     lines.forEach((line, i) => {
-      let cls = '';
-      if (/^\s*File "/.test(line)) cls = 'tok-frame';
-      else if (i === 0) cls = 'tok-key';
-      frag.append(el('span', cls ? 'ln ' + cls : 'ln', line + (i < lines.length - 1 ? '\n' : '')));
+      const row = el('div', 'listing-line');
+      const num = el('span', 'listing-num', String(i + 1));
+      const body = el('span', 'listing-text');
+      body.append(kind === 'json' ? jsonLine(line) : stackLine(line));
+
+      if (kind !== 'json' && !raised && /^\s*File "/.test(line)) {
+        raised = true;
+        row.classList.add('is-raise');
+        num.title = 'Raised here — innermost frame';
+      }
+      row.append(num, body);
+      frag.append(row);
     });
     pre.replaceChildren(frag);
-  }
 
-  document.querySelectorAll('.panel-code').forEach((pre) => {
-    if (pre.dataset.kind === 'json') {
-      if (renderJson(pre)) return;
-    }
-    renderStacktrace(pre);
-  });
+    const meta = box.closest('details')?.querySelector('[data-lines]');
+    if (meta) meta.textContent = lines.length + (lines.length === 1 ? ' line' : ' lines');
 
-  /* 复制当前 panel 的代码内容（沿用 base.html 的 data-copy 交互） */
-  document.querySelectorAll('[data-copy-target]').forEach((btn) => {
-    const pre = btn.closest('details')?.querySelector('.panel-code');
-    if (!pre) return;
-    btn.setAttribute('data-copy', pre.textContent);
+    // 复制走原始文本（行号 div 之间没有换行符，直接取 textContent 会粘成一行）
+    box.closest('details')?.querySelector('[data-copy-target]')?.setAttribute('data-copy', text);
   });
 </script>
 {% endblock %}

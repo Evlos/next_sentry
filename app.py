@@ -279,8 +279,14 @@ def sentry_ingest(project_id):
 @app.route("/")
 def index():
     db = get_db()
+    # failing_count / last_event_at 只为列表页服务：级别是这里唯一该上色的信息，
+    # 所以把"还在报错吗"和"最后什么时候报的"一并取出来，而不是在模板里猜。
     projects = db.execute("""
-        SELECT p.*, COUNT(e.id) as event_count
+        SELECT p.*,
+               COUNT(e.id) as event_count,
+               COALESCE(SUM(CASE WHEN e.level IN ('error', 'fatal') THEN 1 ELSE 0 END), 0)
+                   as failing_count,
+               MAX(e.created_at) as last_event_at
         FROM projects p
         LEFT JOIN events e ON e.project_id = p.id
         GROUP BY p.id

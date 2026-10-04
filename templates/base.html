@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh" class="dark">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -42,23 +42,22 @@
             faint: 'rgb(var(--c-ink-3) / <alpha-value>)',
             accent: 'rgb(var(--c-accent) / <alpha-value>)',
             'accent-2': 'rgb(var(--c-accent-2) / <alpha-value>)',
+            danger: 'rgb(var(--c-danger) / <alpha-value>)',
           },
           fontFamily: {
-            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-          },
-          boxShadow: {
-            card: '0 1px 2px rgb(9 12 20 / 0.04), 0 12px 28px -18px rgb(9 12 20 / 0.35)',
-            pop: '0 2px 4px rgb(9 12 20 / 0.05), 0 18px 40px -20px rgb(9 12 20 / 0.45)',
+            display: ['"IBM Plex Sans Condensed"', '"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+            sans: ['"IBM Plex Sans"', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+            mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
           },
           keyframes: {
-            'fade-up': {
-              from: { opacity: '0', transform: 'translateY(6px)' },
+            // 唯一的入场动效：面板淡入，事件行按顺序轻微错开（像信号逐个到达）
+            'signal-in': {
+              from: { opacity: '0', transform: 'translateY(2px)' },
               to: { opacity: '1', transform: 'none' },
             },
           },
           animation: {
-            'fade-up': 'fade-up 0.28s ease-out both',
+            'signal-in': 'signal-in 0.22s ease-out both',
           },
         },
       },
@@ -69,30 +68,32 @@
   <style>
     :root {
       color-scheme: light;
-      --c-canvas: 246 247 250;
-      --c-surface: 255 255 255;
-      --c-raised: 240 243 247;
-      --c-line: 225 230 237;
-      --c-line-soft: 240 242 246;
-      --c-ink: 20 22 28;
-      --c-ink-2: 86 95 110;
-      --c-ink-3: 137 146 163;
-      --c-accent: 88 74 214;
-      --c-accent-2: 118 98 245;
+      --c-canvas: 247 248 250;   /* #F7F8FA 纸面 */
+      --c-surface: 255 255 255;  /* #FFFFFF */
+      --c-raised: 240 242 246;   /* #F0F2F6 凹槽 */
+      --c-line: 219 224 230;     /* #DBE0E6 刻线 */
+      --c-line-soft: 233 236 241;
+      --c-ink: 18 21 26;         /* #12151A 石墨 */
+      --c-ink-2: 88 97 110;
+      --c-ink-3: 107 117 131;   /* 浅色下 4.7:1 —— 时间戳和 ID 要读得清 */
+      --c-accent: 13 138 124;    /* #0D8A7C 磷光 */
+      --c-accent-2: 17 163 146;
+      --c-danger: 179 39 29;
     }
 
     .dark {
       color-scheme: dark;
-      --c-canvas: 10 11 14;
-      --c-surface: 19 21 26;
-      --c-raised: 28 31 38;
-      --c-line: 40 44 53;
-      --c-line-soft: 28 31 38;
-      --c-ink: 236 238 243;
-      --c-ink-2: 152 160 176;
-      --c-ink-3: 108 116 131;
-      --c-accent: 141 126 255;
-      --c-accent-2: 172 161 255;
+      --c-canvas: 12 15 20;      /* #0C0F14 虚空 */
+      --c-surface: 18 22 29;     /* #12161D 工作台 */
+      --c-raised: 26 31 40;      /* #1A1F28 凹槽 */
+      --c-line: 38 45 56;        /* #262D38 刻线 */
+      --c-line-soft: 26 31 39;
+      --c-ink: 230 234 240;      /* #E6EAF0 粉笔 */
+      --c-ink-2: 150 160 174;
+      --c-ink-3: 105 114 128;
+      --c-accent: 67 217 196;    /* #43D9C4 磷光 */
+      --c-accent-2: 94 230 212;
+      --c-danger: 255 144 120;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -102,155 +103,177 @@
       }
     }
 
-    /* 事件等级令牌：任何带 data-level 的元素都会拿到这组变量，
-       徽标、圆点、筛选器共用同一份配色。 */
+    /* ── 事件等级令牌 ──────────────────────────────────────────
+       整个产品只有一处用颜色：事件的严重级别。任何带 data-level 的
+       元素都会拿到这组变量，行首刻线、徽标、筛选器共用同一份定义。 */
     :root {
-      [data-level="error"], [data-level="fatal"] { --l-fg: 190 24 58;   --l-bg: 255 241 242; --l-line: 254 205 211; }
-      [data-level="warning"]                    { --l-fg: 146 100 8;   --l-bg: 255 249 219; --l-line: 253 224 122; }
-      [data-level="info"]                       { --l-fg: 12 92 158;   --l-bg: 235 245 255; --l-line: 186 219 245; }
-      [data-level="debug"]                      { --l-fg: 71 84 103;   --l-bg: 244 245 247; --l-line: 218 221 228; }
+      [data-level="fatal"]   { --l-solid: 159 18 57;  --l-fg: 159 18 57;  --l-bg: 252 234 239; --l-line: 245 203 214; }
+      [data-level="error"]   { --l-solid: 179 39 29;  --l-fg: 179 39 29;  --l-bg: 252 235 233; --l-line: 246 201 194; }
+      [data-level="warning"] { --l-solid: 138 86 0;   --l-fg: 138 86 0;   --l-bg: 252 244 224; --l-line: 240 223 178; }
+      [data-level="info"]    { --l-solid: 11 95 191;  --l-fg: 11 95 191;  --l-bg: 234 241 253; --l-line: 198 220 248; }
+      [data-level="debug"]   { --l-solid: 82 92 107;  --l-fg: 82 92 107;  --l-bg: 241 243 245; --l-line: 220 224 229; }
     }
 
     .dark {
-      [data-level="error"], [data-level="fatal"] { --l-fg: 253 164 175; --l-bg: 69 10 26;     --l-line: 122 25 45; }
-      [data-level="warning"]                    { --l-fg: 252 211 77;  --l-bg: 56 39 5;      --l-line: 92 68 8; }
-      [data-level="info"]                       { --l-fg: 125 200 255; --l-bg: 8 33 55;       --l-line: 18 61 96; }
-      [data-level="debug"]                      { --l-fg: 165 174 190; --l-bg: 33 37 44;     --l-line: 61 67 78; }
+      [data-level="fatal"]   { --l-solid: 255 126 158; --l-fg: 255 126 158; --l-bg: 56 9 28;     --l-line: 113 23 47; }
+      [data-level="error"]   { --l-solid: 255 144 120; --l-fg: 255 144 120; --l-bg: 59 18 11;    --l-line: 119 41 26; }
+      [data-level="warning"] { --l-solid: 242 198 75;  --l-fg: 242 198 75;  --l-bg: 55 41 10;     --l-line: 107 83 18; }
+      [data-level="info"]    { --l-solid: 127 189 255; --l-fg: 127 189 255; --l-bg: 11 39 69;     --l-line: 21 67 111; }
+      [data-level="debug"]   { --l-solid: 155 165 179; --l-fg: 155 165 179; --l-bg: 27 33 42;     --l-line: 57 66 79; }
     }
   </style>
 
   <!-- 组件层：用 @apply 收敛重复样式 -->
   <style type="text/tailwindcss">
     @layer components {
+      /* 面板：几乎无圆角、无阴影，靠发丝刻线分隔 —— 仪器面板，不是卡片 */
       .panel {
-        @apply rounded-2xl border border-line bg-surface shadow-card;
+        @apply rounded-sm border border-line bg-surface;
       }
 
-      .panel-flush {
-        @apply overflow-hidden rounded-2xl border border-line bg-surface shadow-card;
-      }
-
-      .eyebrow {
-        @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-faint;
+      /* 标签：字段名、时间戳、ID 一律用等宽体，把它们标成"数据"而非"文字" */
+      .label {
+        @apply font-mono text-[10px] font-medium uppercase leading-4 tracking-[0.14em] text-faint;
       }
 
       .btn {
-        @apply inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-line
-               bg-surface px-3 py-1.5 text-sm font-medium text-muted
-               transition hover:border-accent/50 hover:text-ink
-               focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2
+        @apply inline-flex shrink-0 items-center justify-center gap-1.5 rounded-sm border border-line
+               bg-surface px-3 py-1.5 text-[13px] font-medium leading-5 text-muted transition-colors
+               hover:border-ink/30 hover:text-ink
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2
                focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-50;
       }
 
+      /* 主操作 = 最亮的前景色。任何强调都不与严重级别抢颜色。 */
       .btn-primary {
-        @apply border-transparent bg-accent text-white shadow-sm
-               hover:bg-accent-2 hover:text-white;
+        @apply border-ink bg-ink text-canvas hover:border-ink hover:bg-ink hover:text-canvas;
       }
 
       .btn-danger {
-        @apply border-line bg-surface text-rose-600 hover:border-rose-400 hover:text-rose-500;
+        @apply border-line bg-surface text-danger hover:border-danger/50 hover:text-danger;
       }
 
       .btn-icon {
-        @apply h-9 w-9 px-0;
+        @apply h-8 w-8 px-0;
       }
 
       .input {
-        @apply w-full rounded-lg border border-line bg-raised px-3 py-2 text-sm text-ink
-               placeholder:text-faint transition
-               focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/25;
+        @apply w-full rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] text-ink
+               placeholder:text-faint transition-colors
+               focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25;
       }
 
-      .chip {
-        @apply inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1
-               text-xs font-medium text-muted capitalize transition
-               hover:border-accent/50 hover:text-ink;
-      }
-
-      .chip-on {
-        @apply border-transparent bg-accent text-white hover:text-white;
-      }
-
-      .code {
-        @apply font-mono text-[13px] text-ink;
-      }
-
-      .panel-code {
-        @apply overflow-x-auto rounded-xl border border-line-soft bg-raised p-4 font-mono text-xs leading-relaxed text-muted;
-      }
-
-      .panel-code-scroll {
-        @apply max-h-[32rem] overflow-auto;
-      }
-
-      .ln {
-        @apply block;
-      }
-
-      .row-link {
-        @apply block px-4 py-3.5 transition hover:bg-raised/70;
-      }
-
-      /* 事件等级徽标：主题只覆盖变量，一套结构通吃所有 level */
+      /* 等级前缀：像编译器输出里的 error: / warning:，而不是药丸徽章 */
       .level {
-        @apply inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5
-               font-mono text-[11px] font-medium uppercase leading-4 tracking-wide;
+        @apply font-mono text-[10px] font-medium uppercase leading-4 tracking-[0.1em];
         color: rgb(var(--l-fg, var(--c-ink-2)));
-        background-color: rgb(var(--l-bg, var(--c-raised)));
-        border-color: rgb(var(--l-line, var(--c-line)));
       }
 
-      .level-dot {
-        @apply h-1.5 w-1.5 shrink-0 rounded-full;
-        background-color: rgb(var(--l-fg, var(--c-ink-3)));
+      /* 事件行：左侧 2px 刻线是唯一的色彩信号 */
+      .row {
+        @apply block border-l-2 border-line-soft px-4 py-3 transition-colors hover:bg-raised;
+      }
+      .row[data-level] {
+        border-left-color: rgb(var(--l-solid, var(--c-line)));
       }
 
-      /* 语法高亮 token（JSON / stacktrace 由前端渐进增强） */
-      .tok-key { color: rgb(var(--c-accent-2)); }
-      .tok-str { color: rgb(34 160 107); }
-      .dark .tok-str { color: rgb(110 208 160); }
-      .tok-num { color: rgb(200 118 40); }
-      .dark .tok-num { color: rgb(240 168 96); }
-      .tok-bool { color: rgb(160 60 190); }
-      .dark .tok-bool { color: rgb(206 138 255); }
-      .tok-frame { color: rgb(var(--c-ink)); }
+      /* 规格表：标签左对齐等宽，取值右对齐，像仪器背面的铭牌 */
+      .spec-row {
+        @apply grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-x-4 gap-y-0.5 px-4 py-2.5;
+        grid-template-columns: 7rem minmax(0, 1fr);
+      }
+
+      /* 分段筛选器：一整条刻线分隔，选中项用级别色做 2px 下划线。
+         窄屏放不下 5 个筛选项时横向滚动，而不是撑破页面。 */
+      .seg {
+        @apply inline-flex max-w-full overflow-x-auto rounded-sm border border-line bg-surface;
+      }
+      .seg-item {
+        @apply shrink-0 px-2.5 py-1.5 font-mono text-[11px] font-medium uppercase leading-4 tracking-[0.08em]
+               text-muted transition-colors hover:bg-raised hover:text-ink;
+      }
+      .seg-item + .seg-item {
+        border-left: 1px solid rgb(var(--c-line));
+      }
+      .seg-item[aria-current="page"] {
+        @apply bg-raised text-ink;
+        box-shadow: inset 0 -2px 0 0 rgb(var(--l-solid, var(--c-ink)));
+      }
+
+      /* ── 签名元素：行号栏 ─────────────────────────────────────
+         每一行是「行号 + 内容」两列网格，所以长行折行时行号仍然
+         对齐；抛出异常的那一帧（栈顶第一个 File "…"）由级别色标出。 */
+      .listing {
+        @apply overflow-x-auto bg-raised;
+      }
+      .listing-scroll {
+        @apply max-h-[34rem] overflow-y-auto;
+      }
+      .listing-line {
+        @apply grid;
+        grid-template-columns: 2.75rem minmax(0, 1fr);
+      }
+      .listing-num {
+        @apply select-none border-r border-line-soft py-0 pl-3 pr-3 text-right align-top
+               font-mono text-[10px] leading-5 text-faint tabular-nums;
+      }
+      .listing-text {
+        @apply whitespace-pre-wrap break-words py-0 pl-4 pr-4 font-mono text-[12.5px] leading-5 text-muted;
+      }
+      .listing-line.is-raise {
+        box-shadow: inset 2px 0 0 0 rgb(var(--l-solid, var(--c-accent)));
+      }
+      .listing-line.is-raise .listing-num {
+        @apply text-ink;
+        color: rgb(var(--l-solid, var(--c-ink)));
+      }
+      .listing-line.is-raise .listing-text {
+        @apply text-ink;
+      }
+
+      /* 代码 token：色相刻意与等级区分开，代码区只出现在 raised 底色上 */
+      .tok-key  { color: rgb(var(--c-accent)); }
+      .tok-str  { color: rgb(63 122 74); }
+      .dark .tok-str { color: rgb(124 192 140); }
+      .tok-num  { color: rgb(150 96 0); }
+      .dark .tok-num { color: rgb(224 166 92); }
+      .tok-bool { color: rgb(122 79 163); }
+      .dark .tok-bool { color: rgb(183 149 224); }
+      .tok-path { color: rgb(var(--c-ink)); }
     }
   </style>
 </head>
 
 <body class="min-h-screen bg-canvas font-sans text-ink antialiased transition-colors duration-200">
   <a href="#main"
-     class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg
-            focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:text-white">跳到主要内容</a>
+     class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm
+            focus:bg-ink focus:px-4 focus:py-2 focus:text-[13px] focus:text-canvas">Skip to content</a>
 
-  <header class="sticky top-0 z-40 border-b border-line bg-canvas/80 backdrop-blur-md">
-    <nav class="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
-      <a href="{{ url_for('index') }}" class="group flex items-center gap-2.5">
-        <span class="grid h-7 w-7 place-items-center rounded-lg bg-accent/10 text-accent ring-1 ring-inset ring-accent/25
-                     transition group-hover:bg-accent/15">
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 2.2 20.5 7v10L12 21.8 3.5 17V7L12 2.2Zm0 2.31L5.5 8.4v7.2L12 19.49l6.5-3.89V8.4L12 4.51Z"/>
-            <path d="m12 8.2 3.4 2.04v4.07L12 16.35l-3.4-2.04v-4.07L12 8.2Z"/>
-          </svg>
-        </span>
-        <span class="flex items-baseline gap-2">
-          <span class="text-[15px] font-semibold tracking-tight text-ink">Next Sentry</span>
-          <span class="hidden text-[11px] font-medium text-faint sm:inline">self-hosted error tracking</span>
-        </span>
+  <header class="sticky top-0 z-40 border-b border-line bg-canvas/90 backdrop-blur-md">
+    <nav class="mx-auto flex h-12 max-w-5xl items-center gap-3 px-4 sm:px-6">
+      <a href="{{ url_for('index') }}" class="group flex items-center gap-2">
+        <svg class="h-4 w-4 text-ink transition group-hover:text-accent" viewBox="0 0 24 24"
+             fill="currentColor" aria-hidden="true">
+          <path d="M12 2.2 20.5 7v10L12 21.8 3.5 17V7L12 2.2Zm0 2.31L5.5 8.4v7.2L12 19.49l6.5-3.89V8.4L12 4.51Z"/>
+          <path d="m12 8.2 3.4 2.04v4.07L12 16.35l-3.4-2.04v-4.07L12 8.2Z"/>
+        </svg>
+        <span class="font-mono text-[13px] font-medium tracking-tight text-ink">next_sentry</span>
       </a>
+
+      <span class="hidden h-3 w-px bg-line sm:block" aria-hidden="true"></span>
+      <span class="label hidden sm:block">Sentry-compatible</span>
 
       <div class="ml-auto flex items-center gap-2">
         {% if read_only|default(false) %}
-        <span class="hidden items-center gap-1.5 rounded-lg border border-line bg-raised px-2 py-1
-                     text-[11px] font-medium text-muted sm:inline-flex">
+        <span class="hidden items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-faint sm:inline-flex">
           <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <rect x="4" y="10.5" width="16" height="9.5" rx="2"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/>
+            <rect x="4" y="10.5" width="16" height="9.5" rx="1.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/>
           </svg>
           Read-only
         </span>
         {% endif %}
 
-        <button id="theme-toggle" type="button" data-theme-toggle class="btn btn-icon" title="切换主题" aria-label="切换主题">
+        <button id="theme-toggle" type="button" data-theme-toggle class="btn btn-icon" title="Switch theme" aria-label="Switch theme">
           <svg class="theme-icon-dark h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/>
@@ -265,15 +288,17 @@
     </nav>
   </header>
 
-  <main id="main" class="mx-auto max-w-6xl animate-fade-up px-4 py-8 sm:px-6 sm:py-10">
+  <!-- 宽度只有这一处定义。页头、正文、页脚共用同一个 max-w-5xl，
+       不提供按页覆写的口子 —— 上限不同会让页头 logo 在页面间左右跳动。 -->
+  <main id="main" class="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="mx-auto max-w-6xl px-4 pb-10 pt-2 sm:px-6">
-    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line-soft pt-5 text-[11px] text-faint">
-      <span class="font-mono">⬡ next_sentry</span>
-      <span aria-hidden="true">·</span>
-      <span>SQLite-backed Sentry-compatible ingest</span>
+  <footer class="mx-auto max-w-5xl px-4 pb-10 sm:px-6">
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line-soft pt-4 font-mono text-[10px] tracking-wide text-faint">
+      <span>next_sentry</span>
+      <span aria-hidden="true">/</span>
+      <span>SQLite-backed Sentry ingest</span>
     </div>
   </footer>
 
@@ -306,7 +331,7 @@
     applyTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
 
     /* ── 复制：任意带 data-copy 的按钮 ───────────────────────── */
-    const COPY_ICON = '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    const COPY_ICON = '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="1.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
     const DONE_ICON = '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
     async function copyText(text) {
@@ -341,11 +366,11 @@
       if (!value) return;
       const original = btn.innerHTML;
       copyText(value).then((ok) => {
-        btn.innerHTML = ok ? DONE_ICON + '<span>已复制</span>' : '<span>复制失败</span>';
-        btn.classList.toggle('!text-emerald-600', ok);
+        btn.innerHTML = ok ? DONE_ICON + '<span>Copied</span>' : '<span>Copy failed</span>';
+        btn.classList.toggle('!text-accent', ok);
         setTimeout(() => {
           btn.innerHTML = original;
-          btn.classList.remove('!text-emerald-600');
+          btn.classList.remove('!text-accent');
         }, 1600);
       });
     }, true);
@@ -375,5 +400,5 @@
     });
   </script>
   {% block scripts %}{% endblock %}
-</body>
+  </body>
 </html>
