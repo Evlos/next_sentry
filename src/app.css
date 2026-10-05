@@ -1,0 +1,615 @@
+/* ══════════════════════════════════════════════════════════════════════
+   next_sentry — console stylesheet
+
+   The product is a self-hosted Sentry-protocol error sink: a wire-tapping
+   device for exceptions. Its world is the signal strip — a scope readout
+   where events arrive as a continuous time series. Two rules hold the
+   whole console together:
+
+     1. Colour means severity, and nothing else.
+     2. Structure is information — hairlines and mono labels only.
+
+   The one bold gesture is the vertical severity ribbon in the left rail.
+   Everything around it stays quiet so the ribbon can do the talking.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@import 'tailwindcss';
+@import './fonts.css';
+
+@source '../templates/**/*.html';
+
+/* Dark is a class on <html>, not the media query, so the toggle can win. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Raw palette ───────────────────────────────────────────────────────
+   Kept as plain custom properties because they flip at runtime on
+   <html>; @theme inline maps them into Tailwind's colour tokens below,
+   which is what lets templates use `bg-canvas` with no dark: variants. */
+
+:root {
+  color-scheme: light;
+
+  /* Neutrals — cool graphite, faintly blue-green so the paper never
+     drifts toward the warm-cream default. */
+  --c-canvas: #f3f4f6; /* paper            */
+  --c-surface: #ffffff; /* raised card      */
+  --c-raised: #e9ebef; /* the groove       */
+  --c-line: #d3d8e0; /* hairline          */
+  --c-line-soft: #e5e8ed; /* whisper hairline */
+  --c-ink: #14171c; /* graphite          */
+  --c-ink-2: #4a515c; /* secondary        */
+  --c-ink-3: #626a77; /* tertiary, 4.6:1  */
+
+  /* Iris — the interface accent. Chosen to sit outside the severity ramp
+     entirely so a hover state can never be mistaken for a severity. */
+  --c-accent: #4b44c4;
+  --c-accent-2: #635ce0;
+
+  /* Moss — reserved for one meaning only: nothing is failing. */
+  --c-nominal: #2c7a4d;
+
+  /* ── Severity ramp ──────────────────────────────────────────────────
+     A true ordered ladder: crimson → vermilion → amber → sky → slate.
+     Every [data-level] element inherits these four slots, so a row's
+     rail, its word, its chip and its ribbon tick can never disagree.
+     Each one clears 4.5:1 on --c-surface and on --c-raised, so a level
+     word stays readable on a groove. */
+  --l-fatal: #be123c;
+  --l-error: #c62a1b;
+  --l-warning: #8a5b00;
+  --l-info: #0b5fbf;
+  --l-debug: #5a6472;
+
+  /* Syntax tints — hue kept apart from severity so the trace viewer
+     never looks like it is reporting a new problem. */
+  --t-key: #4b44c4;
+  --t-str: #2f7a4a;
+  --t-num: #915a00;
+  --t-lit: #6f43a0;
+  --t-esc: #0b5fbf;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --c-canvas: #0a0c10; /* void   */
+  --c-surface: #101319; /* plate  */
+  --c-raised: #171b23; /* groove */
+  --c-line: #272c37; /* hairline  */
+  --c-line-soft: #191d25; /* whisper   */
+  --c-ink: #e8ebf0; /* chalk      */
+  --c-ink-2: #99a1ae; /* secondary  */
+  --c-ink-3: #7e8797; /* tertiary, 4.8:1 on the groove */
+
+  --c-accent: #a79bff;
+  --c-accent-2: #bcb2ff;
+
+  --c-nominal: #5cc98a;
+
+  --l-fatal: #ff7ea0;
+  --l-error: #ff9478;
+  --l-warning: #f2c64b;
+  --l-info: #7fbdff;
+  --l-debug: #9ba5b4;
+
+  --t-key: #a79bff;
+  --t-str: #7cc08c;
+  --t-num: #e0a65c;
+  --t-lit: #b795e0;
+  --t-esc: #7fbdff;
+}
+
+[data-level='fatal'] {
+  --l-solid: var(--l-fatal);
+  --l-bg: #fce8ee;
+  --l-line: #f5cbd6;
+}
+[data-level='error'] {
+  --l-solid: var(--l-error);
+  --l-bg: #fceae8;
+  --l-line: #f6c9c2;
+}
+[data-level='warning'] {
+  --l-solid: var(--l-warning);
+  --l-bg: #fcf4e0;
+  --l-line: #f0dfb2;
+}
+[data-level='info'] {
+  --l-solid: var(--l-info);
+  --l-bg: #eaf1fd;
+  --l-line: #c6dcf8;
+}
+[data-level='debug'] {
+  --l-solid: var(--l-debug);
+  --l-bg: #f1f3f5;
+  --l-line: #dce0e5;
+}
+
+.dark [data-level='fatal'] {
+  --l-bg: #380a1c;
+  --l-line: #71172f;
+}
+.dark [data-level='error'] {
+  --l-bg: #3b120b;
+  --l-line: #77291a;
+}
+.dark [data-level='warning'] {
+  --l-bg: #37290a;
+  --l-line: #6b5312;
+}
+.dark [data-level='info'] {
+  --l-bg: #0b2745;
+  --l-line: #15436f;
+}
+.dark [data-level='debug'] {
+  --l-bg: #1b212a;
+  --l-line: #39424f;
+}
+
+/* ── Tailwind token mapping ──────────────────────────────────────────── */
+
+@theme inline {
+  --color-canvas: var(--c-canvas);
+  --color-surface: var(--c-surface);
+  --color-raised: var(--c-raised);
+  --color-line: var(--c-line);
+  --color-line-soft: var(--c-line-soft);
+  --color-ink: var(--c-ink);
+  --color-muted: var(--c-ink-2);
+  --color-faint: var(--c-ink-3);
+  --color-accent: var(--c-accent);
+  --color-accent-2: var(--c-accent-2);
+  --color-nominal: var(--c-nominal);
+
+  --font-display: 'Archivo', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* A deliberately compact scale: this console is dense, and 14px body
+     text would waste vertical space that event counts need. */
+  --text-eyebrow: 0.625rem; /* 10px — equipment labels      */
+  --text-micro: 0.6875rem; /* 11px — timestamps, IDs       */
+  --text-code: 0.78125rem; /* 12.5px — code, DSN, traces   */
+  --text-ui: 0.8125rem; /* 13px — controls, buttons      */
+  --text-body: 0.875rem; /* 14px — prose, event titles    */
+  --text-lead: 0.9375rem; /* 15px — page subtitles         */
+  --text-title: 1.5rem; /* 24px — event titles           */
+  --text-display: 1.875rem; /* 30px — page titles          */
+
+  --tracking-label: 0.16em; /* engraved equipment labels */
+  --tracking-wide: 0.08em;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────── */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-feature-settings: 'cv05' 1;
+  }
+
+  /* One focus treatment for the whole console, so keyboard users never
+     have to hunt for a bespoke ring. */
+  :focus-visible {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 2px;
+    border-radius: 1px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--c-accent) 24%, transparent);
+  }
+
+  /* Scrollbars read as instrument chrome, not OS chrome. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-line) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--c-line);
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--c-ink-3) 70%, transparent);
+    background-clip: content-box;
+  }
+
+  /* Belt and braces: individual components also guard with motion-safe. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ── Components ──────────────────────────────────────────────────────── */
+
+@layer components {
+  /* Page titles. Archivo's width axis is the personality: condensed and
+     tight, so it reads as an engraved plate rather than a headline. */
+  .t-display {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 78;
+    font-weight: 600;
+    letter-spacing: -0.018em;
+    line-height: 1.05;
+  }
+
+  .t-title {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 78;
+    font-weight: 600;
+    letter-spacing: -0.014em;
+    line-height: 1.12;
+  }
+
+  /* Equipment label: the same family pushed *wide* and tracked out, which
+     is what stamped text on lab gear actually looks like. */
+  .label {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 112;
+    font-size: var(--text-eyebrow);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--c-ink-3);
+  }
+
+  /* The mono label, for field names that live inside prose. */
+  .label-mono {
+    font-family: var(--font-mono);
+    font-size: var(--text-eyebrow);
+    font-weight: 500;
+    line-height: 1.6;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--c-ink-3);
+  }
+
+  /* Rail label: the rail is 3.5rem wide, so the label runs down it the
+     way stamped text runs down the side of lab gear. */
+  .rail-label {
+    writing-mode: vertical-rl;
+    letter-spacing: 0.22em;
+  }
+
+  /* Hairline plate. Near-zero radius, no shadow: this is an instrument
+     face, not a card. */
+  .panel {
+    border: 1px solid var(--c-line);
+    background: var(--c-surface);
+  }
+
+  .btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border: 1px solid var(--c-line);
+    background: var(--c-surface);
+    padding: 0.375rem 0.75rem;
+    font-size: var(--text-ui);
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: var(--c-ink-2);
+    transition:
+      color 0.14s ease,
+      border-color 0.14s ease,
+      background-color 0.14s ease;
+  }
+  .btn:hover {
+    border-color: color-mix(in oklab, var(--c-ink) 32%, transparent);
+    color: var(--c-ink);
+  }
+  .btn:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  /* Primary action is the brightest foreground on the page. No accent
+     fill — emphasis must never compete with a severity. */
+  .btn-primary {
+    border-color: var(--c-ink);
+    background: var(--c-ink);
+    color: var(--c-canvas);
+  }
+  .btn-primary:hover {
+    border-color: var(--c-ink);
+    background: var(--c-ink);
+    color: var(--c-canvas);
+  }
+
+  .btn-danger {
+    border-color: var(--c-line);
+    background: var(--c-surface);
+    color: var(--l-error);
+  }
+  .btn-danger:hover {
+    border-color: color-mix(in oklab, var(--l-error) 50%, transparent);
+    background: var(--l-bg);
+    color: var(--l-error);
+  }
+
+  .btn-icon {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+  }
+
+  .btn-xs {
+    height: 1.5rem;
+    padding: 0 0.5rem;
+    font-size: var(--text-eyebrow);
+    line-height: 1;
+  }
+
+  .input {
+    width: 100%;
+    border: 1px solid var(--c-line);
+    background: var(--c-surface);
+    padding: 0.375rem 0.75rem;
+    font-size: var(--text-ui);
+    color: var(--c-ink);
+    transition:
+      border-color 0.14s ease,
+      box-shadow 0.14s ease;
+  }
+  .input::placeholder {
+    color: var(--c-ink-3);
+  }
+  .input:focus {
+    border-color: var(--c-accent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--c-accent) 18%, transparent);
+    outline: none;
+  }
+
+  /* Severity word. Reads like the `error:` prefix in compiler output
+     rather than a pill badge. */
+  .level {
+    font-family: var(--font-mono);
+    font-size: var(--text-eyebrow);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--l-solid, var(--c-ink-2));
+  }
+
+  /* ── Signature: the severity ribbon ─────────────────────────────────
+     A raster of recent events, newest first, one tick per event, tick
+     colour = severity. Ticks are a fixed thickness and stack from the
+     top, so the ribbon reads as a comb: a fat block means a quiet
+     channel, a dense comb means a flood, and the comb's shape shows when
+     the trouble actually was. */
+  .ribbon {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ribbon-tick {
+    flex: 0 0 7px;
+    background: var(--l-solid, var(--c-ink-3));
+    opacity: 0.85;
+    transition:
+      opacity 0.14s ease,
+      transform 0.14s ease;
+  }
+  .ribbon-tick:hover {
+    opacity: 1;
+    transform: scaleX(1.5);
+  }
+  /* Nothing has come in: a flat baseline, so a quiet rail still reads as
+     an instrument at rest rather than a broken layout. */
+  .ribbon-flat {
+    width: 100%;
+    height: 7px;
+    background: var(--c-line);
+  }
+  /* Below lg the rail becomes a top strip, so the ribbon turns on its
+     side. row-reverse puts the newest event on the right, which is where
+     "now" belongs on a left-to-right time axis. */
+  @media (max-width: 1023px) {
+    .ribbon {
+      flex-direction: row-reverse;
+      height: 0.5rem;
+    }
+    .ribbon-tick {
+      flex: 1 1 0;
+      min-width: 3px;
+      height: 100%;
+    }
+    .ribbon-tick:hover {
+      transform: scaleY(1.6);
+    }
+    .ribbon-flat {
+      height: 100%;
+    }
+  }
+
+  /* Per-project level mix in the list. Segment widths are real counts, so
+     a channel buried in warnings reads differently from one throwing
+     fatals. Separators are inset rather than flex gaps, which keeps the
+     percentages summing to exactly 100%. */
+  .mix {
+    display: flex;
+    height: 0.5rem;
+    width: 100%;
+    overflow: hidden;
+    background: var(--c-raised);
+  }
+  .mix-seg {
+    background: var(--l-solid);
+    box-shadow: inset -1px 0 0 0 var(--c-surface);
+  }
+  .mix-seg:last-child {
+    box-shadow: none;
+  }
+  .mix-empty {
+    flex: 1 1 auto;
+    background: var(--c-line);
+  }
+
+  /* Event row. The 2px left rail is the only chromatic signal. */
+  .row {
+    display: block;
+    border-left: 2px solid var(--l-solid, var(--c-line));
+    padding: 0.625rem 1rem;
+    transition: background-color 0.12s ease;
+  }
+  .row:hover {
+    background: var(--c-raised);
+  }
+
+  /* Segmented level filter. The active item underlines itself in its own
+     severity, so the filter state carries the same meaning as the data. */
+  .seg {
+    display: inline-flex;
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--c-line);
+    background: var(--c-surface);
+  }
+  .seg-item {
+    flex-shrink: 0;
+    padding: 0.375rem 0.625rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    font-weight: 500;
+    line-height: 1rem;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--c-ink-2);
+    transition:
+      color 0.12s ease,
+      background-color 0.12s ease;
+  }
+  .seg-item + .seg-item {
+    border-left: 1px solid var(--c-line);
+  }
+  .seg-item:hover {
+    background: var(--c-raised);
+    color: var(--c-ink);
+  }
+  .seg-item[aria-current='page'] {
+    background: var(--c-raised);
+    color: var(--c-ink);
+    box-shadow: inset 0 -2px 0 0 var(--l-solid, var(--c-ink));
+  }
+
+  /* ── Trace viewer ───────────────────────────────────────────────────
+     Every line is a two-column grid, so a long wrapped line still lines
+     its number up. The frame that raised the exception is marked: Sentry
+     prints frames innermost-first, so the first File "…" is the raise
+     site. That mark is real information, not decoration. */
+  .listing {
+    overflow-x: auto;
+    background: var(--c-raised);
+  }
+  .listing-scroll {
+    max-height: 32rem;
+    overflow-y: auto;
+  }
+  .listing-line {
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+  }
+  .listing-num {
+    user-select: none;
+    border-right: 1px solid var(--c-line-soft);
+    padding: 0 0.625rem 0 0;
+    text-align: right;
+    vertical-align: top;
+    font-family: var(--font-mono);
+    font-size: var(--text-eyebrow);
+    line-height: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--c-ink-3);
+  }
+  .listing-text {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    padding: 0 1rem 0 0.75rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-code);
+    line-height: 1.25rem;
+    color: var(--c-ink-2);
+  }
+  .listing-line.is-raise {
+    box-shadow: inset 2px 0 0 0 var(--l-solid, var(--c-accent));
+  }
+  .listing-line.is-raise .listing-num {
+    color: var(--l-solid, var(--c-ink));
+  }
+  .listing-line.is-raise .listing-text {
+    color: var(--c-ink);
+  }
+
+  .tok-key {
+    color: var(--t-key);
+  }
+  .tok-str {
+    color: var(--t-str);
+  }
+  .tok-num {
+    color: var(--t-num);
+  }
+  .tok-lit {
+    color: var(--t-lit);
+  }
+  .tok-esc {
+    color: var(--t-esc);
+  }
+  .tok-path {
+    color: var(--c-ink);
+  }
+
+  /* ── Motion ──────────────────────────────────────────────────────────
+     One orchestrated moment: the ribbon's ticks arrive newest-first like
+     signals landing, then everything else is still. */
+  @keyframes tick-in {
+    from {
+      opacity: 0;
+      transform: scaleY(0.35);
+    }
+    to {
+      opacity: 0.85;
+      transform: none;
+    }
+  }
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ribbon-tick {
+      animation: tick-in 0.26s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+      animation-delay: calc(var(--i, 0) * 14ms);
+    }
+    .animate-rise {
+      animation: rise-in 0.2s ease-out both;
+      animation-delay: calc(min(var(--i, 0), 12) * 16ms);
+    }
+  }
+}

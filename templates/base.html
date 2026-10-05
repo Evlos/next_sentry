@@ -1,13 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <title>Next Sentry{% block title %}{% endblock %}</title>
 
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234b44c4' stroke-width='1.8'%3E%3Cpath d='M12 2.2 20.5 7v10L12 21.8 3.5 17V7L12 2.2Z'/%3E%3Cpath d='m12 8.2 3.4 2.04v4.07L12 16.35l-3.4-2.04v-4.07L12 8.2Z' fill='%234b44c4' stroke='none'/%3E%3C/svg%3E"/>
+
   <script>
-    // 在首帧渲染前套用主题，避免深浅色闪烁
+    /* Apply the theme before first paint, otherwise a dark-mode visitor
+       gets a white flash on every navigation. */
     (function () {
       try {
         var saved = localStorage.getItem('next-sentry-theme');
@@ -21,287 +24,78 @@
     })();
   </script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            canvas: 'rgb(var(--c-canvas) / <alpha-value>)',
-            surface: 'rgb(var(--c-surface) / <alpha-value>)',
-            raised: 'rgb(var(--c-raised) / <alpha-value>)',
-            line: 'rgb(var(--c-line) / <alpha-value>)',
-            'line-soft': 'rgb(var(--c-line-soft) / <alpha-value>)',
-            ink: 'rgb(var(--c-ink) / <alpha-value>)',
-            muted: 'rgb(var(--c-ink-2) / <alpha-value>)',
-            faint: 'rgb(var(--c-ink-3) / <alpha-value>)',
-            accent: 'rgb(var(--c-accent) / <alpha-value>)',
-            'accent-2': 'rgb(var(--c-accent-2) / <alpha-value>)',
-            danger: 'rgb(var(--c-danger) / <alpha-value>)',
-          },
-          fontFamily: {
-            display: ['"IBM Plex Sans Condensed"', '"IBM Plex Sans"', 'system-ui', 'sans-serif'],
-            sans: ['"IBM Plex Sans"', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
-            mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-          },
-          keyframes: {
-            // 唯一的入场动效：面板淡入，事件行按顺序轻微错开（像信号逐个到达）
-            'signal-in': {
-              from: { opacity: '0', transform: 'translateY(2px)' },
-              to: { opacity: '1', transform: 'none' },
-            },
-          },
-          animation: {
-            'signal-in': 'signal-in 0.22s ease-out both',
-          },
-        },
-      },
-    };
-  </script>
-
-  <!-- 主题令牌：所有颜色走 CSS 变量，模板里无需再写 dark: 变体 -->
-  <style>
-    :root {
-      color-scheme: light;
-      --c-canvas: 247 248 250;   /* #F7F8FA 纸面 */
-      --c-surface: 255 255 255;  /* #FFFFFF */
-      --c-raised: 240 242 246;   /* #F0F2F6 凹槽 */
-      --c-line: 219 224 230;     /* #DBE0E6 刻线 */
-      --c-line-soft: 233 236 241;
-      --c-ink: 18 21 26;         /* #12151A 石墨 */
-      --c-ink-2: 88 97 110;
-      --c-ink-3: 107 117 131;   /* 浅色下 4.7:1 —— 时间戳和 ID 要读得清 */
-      --c-accent: 13 138 124;    /* #0D8A7C 磷光 */
-      --c-accent-2: 17 163 146;
-      --c-danger: 179 39 29;
-    }
-
-    .dark {
-      color-scheme: dark;
-      --c-canvas: 12 15 20;      /* #0C0F14 虚空 */
-      --c-surface: 18 22 29;     /* #12161D 工作台 */
-      --c-raised: 26 31 40;      /* #1A1F28 凹槽 */
-      --c-line: 38 45 56;        /* #262D38 刻线 */
-      --c-line-soft: 26 31 39;
-      --c-ink: 230 234 240;      /* #E6EAF0 粉笔 */
-      --c-ink-2: 150 160 174;
-      --c-ink-3: 105 114 128;
-      --c-accent: 67 217 196;    /* #43D9C4 磷光 */
-      --c-accent-2: 94 230 212;
-      --c-danger: 255 144 120;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        transition-duration: 0.01ms !important;
-      }
-    }
-
-    /* ── 事件等级令牌 ──────────────────────────────────────────
-       整个产品只有一处用颜色：事件的严重级别。任何带 data-level 的
-       元素都会拿到这组变量，行首刻线、徽标、筛选器共用同一份定义。 */
-    :root {
-      [data-level="fatal"]   { --l-solid: 159 18 57;  --l-fg: 159 18 57;  --l-bg: 252 234 239; --l-line: 245 203 214; }
-      [data-level="error"]   { --l-solid: 179 39 29;  --l-fg: 179 39 29;  --l-bg: 252 235 233; --l-line: 246 201 194; }
-      [data-level="warning"] { --l-solid: 138 86 0;   --l-fg: 138 86 0;   --l-bg: 252 244 224; --l-line: 240 223 178; }
-      [data-level="info"]    { --l-solid: 11 95 191;  --l-fg: 11 95 191;  --l-bg: 234 241 253; --l-line: 198 220 248; }
-      [data-level="debug"]   { --l-solid: 82 92 107;  --l-fg: 82 92 107;  --l-bg: 241 243 245; --l-line: 220 224 229; }
-    }
-
-    .dark {
-      [data-level="fatal"]   { --l-solid: 255 126 158; --l-fg: 255 126 158; --l-bg: 56 9 28;     --l-line: 113 23 47; }
-      [data-level="error"]   { --l-solid: 255 144 120; --l-fg: 255 144 120; --l-bg: 59 18 11;    --l-line: 119 41 26; }
-      [data-level="warning"] { --l-solid: 242 198 75;  --l-fg: 242 198 75;  --l-bg: 55 41 10;     --l-line: 107 83 18; }
-      [data-level="info"]    { --l-solid: 127 189 255; --l-fg: 127 189 255; --l-bg: 11 39 69;     --l-line: 21 67 111; }
-      [data-level="debug"]   { --l-solid: 155 165 179; --l-fg: 155 165 179; --l-bg: 27 33 42;     --l-line: 57 66 79; }
-    }
-  </style>
-
-  <!-- 组件层：用 @apply 收敛重复样式 -->
-  <style type="text/tailwindcss">
-    @layer components {
-      /* 面板：几乎无圆角、无阴影，靠发丝刻线分隔 —— 仪器面板，不是卡片 */
-      .panel {
-        @apply rounded-sm border border-line bg-surface;
-      }
-
-      /* 标签：字段名、时间戳、ID 一律用等宽体，把它们标成"数据"而非"文字" */
-      .label {
-        @apply font-mono text-[10px] font-medium uppercase leading-4 tracking-[0.14em] text-faint;
-      }
-
-      .btn {
-        @apply inline-flex shrink-0 items-center justify-center gap-1.5 rounded-sm border border-line
-               bg-surface px-3 py-1.5 text-[13px] font-medium leading-5 text-muted transition-colors
-               hover:border-ink/30 hover:text-ink
-               focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2
-               focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-50;
-      }
-
-      /* 主操作 = 最亮的前景色。任何强调都不与严重级别抢颜色。 */
-      .btn-primary {
-        @apply border-ink bg-ink text-canvas hover:border-ink hover:bg-ink hover:text-canvas;
-      }
-
-      .btn-danger {
-        @apply border-line bg-surface text-danger hover:border-danger/50 hover:text-danger;
-      }
-
-      .btn-icon {
-        @apply h-8 w-8 px-0;
-      }
-
-      .input {
-        @apply w-full rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] text-ink
-               placeholder:text-faint transition-colors
-               focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25;
-      }
-
-      /* 等级前缀：像编译器输出里的 error: / warning:，而不是药丸徽章 */
-      .level {
-        @apply font-mono text-[10px] font-medium uppercase leading-4 tracking-[0.1em];
-        color: rgb(var(--l-fg, var(--c-ink-2)));
-      }
-
-      /* 事件行：左侧 2px 刻线是唯一的色彩信号 */
-      .row {
-        @apply block border-l-2 border-line-soft px-4 py-3 transition-colors hover:bg-raised;
-      }
-      .row[data-level] {
-        border-left-color: rgb(var(--l-solid, var(--c-line)));
-      }
-
-      /* 规格表：标签左对齐等宽，取值右对齐，像仪器背面的铭牌 */
-      .spec-row {
-        @apply grid grid-cols-[7rem_minmax(0,1fr)] items-baseline gap-x-4 gap-y-0.5 px-4 py-2.5;
-        grid-template-columns: 7rem minmax(0, 1fr);
-      }
-
-      /* 分段筛选器：一整条刻线分隔，选中项用级别色做 2px 下划线。
-         窄屏放不下 5 个筛选项时横向滚动，而不是撑破页面。 */
-      .seg {
-        @apply inline-flex max-w-full overflow-x-auto rounded-sm border border-line bg-surface;
-      }
-      .seg-item {
-        @apply shrink-0 px-2.5 py-1.5 font-mono text-[11px] font-medium uppercase leading-4 tracking-[0.08em]
-               text-muted transition-colors hover:bg-raised hover:text-ink;
-      }
-      .seg-item + .seg-item {
-        border-left: 1px solid rgb(var(--c-line));
-      }
-      .seg-item[aria-current="page"] {
-        @apply bg-raised text-ink;
-        box-shadow: inset 0 -2px 0 0 rgb(var(--l-solid, var(--c-ink)));
-      }
-
-      /* ── 签名元素：行号栏 ─────────────────────────────────────
-         每一行是「行号 + 内容」两列网格，所以长行折行时行号仍然
-         对齐；抛出异常的那一帧（栈顶第一个 File "…"）由级别色标出。 */
-      .listing {
-        @apply overflow-x-auto bg-raised;
-      }
-      .listing-scroll {
-        @apply max-h-[34rem] overflow-y-auto;
-      }
-      .listing-line {
-        @apply grid;
-        grid-template-columns: 2.75rem minmax(0, 1fr);
-      }
-      .listing-num {
-        @apply select-none border-r border-line-soft py-0 pl-3 pr-3 text-right align-top
-               font-mono text-[10px] leading-5 text-faint tabular-nums;
-      }
-      .listing-text {
-        @apply whitespace-pre-wrap break-words py-0 pl-4 pr-4 font-mono text-[12.5px] leading-5 text-muted;
-      }
-      .listing-line.is-raise {
-        box-shadow: inset 2px 0 0 0 rgb(var(--l-solid, var(--c-accent)));
-      }
-      .listing-line.is-raise .listing-num {
-        @apply text-ink;
-        color: rgb(var(--l-solid, var(--c-ink)));
-      }
-      .listing-line.is-raise .listing-text {
-        @apply text-ink;
-      }
-
-      /* 代码 token：色相刻意与等级区分开，代码区只出现在 raised 底色上 */
-      .tok-key  { color: rgb(var(--c-accent)); }
-      .tok-str  { color: rgb(63 122 74); }
-      .dark .tok-str { color: rgb(124 192 140); }
-      .tok-num  { color: rgb(150 96 0); }
-      .dark .tok-num { color: rgb(224 166 92); }
-      .tok-bool { color: rgb(122 79 163); }
-      .dark .tok-bool { color: rgb(183 149 224); }
-      .tok-path { color: rgb(var(--c-ink)); }
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}"/>
 </head>
 
-<body class="min-h-screen bg-canvas font-sans text-ink antialiased transition-colors duration-200">
+<body class="min-h-screen bg-canvas font-sans text-ink antialiased">
   <a href="#main"
-     class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm
-            focus:bg-ink focus:px-4 focus:py-2 focus:text-[13px] focus:text-canvas">Skip to content</a>
+     class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:border
+            focus:border-ink focus:bg-ink focus:px-4 focus:py-2 focus:text-ui focus:text-canvas">Skip to content</a>
 
-  <header class="sticky top-0 z-40 border-b border-line bg-canvas/90 backdrop-blur-md">
-    <nav class="flex h-12 items-center gap-3 px-4 sm:px-6 lg:px-10">
-      <a href="{{ url_for('index') }}" class="group flex items-center gap-2">
-        <svg class="h-4 w-4 text-ink transition group-hover:text-accent" viewBox="0 0 24 24"
-             fill="currentColor" aria-hidden="true">
-          <path d="M12 2.2 20.5 7v10L12 21.8 3.5 17V7L12 2.2Zm0 2.31L5.5 8.4v7.2L12 19.49l6.5-3.89V8.4L12 4.51Z"/>
-          <path d="m12 8.2 3.4 2.04v4.07L12 16.35l-3.4-2.04v-4.07L12 8.2Z"/>
-        </svg>
-        <span class="font-mono text-[13px] font-medium tracking-tight text-ink">next_sentry</span>
-      </a>
+  <div class="flex min-h-screen flex-col lg:flex-row">
 
-      <span class="hidden h-3 w-px bg-line sm:block" aria-hidden="true"></span>
-      <span class="label hidden sm:block">Sentry-compatible</span>
+    <!-- ── The rail ──────────────────────────────────────────────────────
+         Controls cluster at the top; the severity ribbon fills whatever
+         is left. Above lg the whole thing collapses into a top strip and
+         the ribbon turns on its side, so the signal survives on a phone. -->
+    <aside class="z-40 flex shrink-0 flex-col border-b border-line bg-canvas/95 backdrop-blur-sm
+                  lg:sticky lg:top-0 lg:h-screen lg:w-14 lg:border-b-0 lg:border-r">
+      <div class="flex items-center gap-2.5 px-4 py-2.5 lg:flex-col lg:gap-2.5 lg:px-0 lg:py-3">
 
-      <div class="ml-auto flex items-center gap-2">
-        {% if read_only|default(false) %}
-        <span class="hidden items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-faint sm:inline-flex">
-          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <rect x="4" y="10.5" width="16" height="9.5" rx="1.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/>
+        <a href="{{ url_for('index') }}" class="group flex items-center gap-2" title="next_sentry — projects">
+          <svg class="h-[18px] w-[18px] shrink-0 text-ink transition-colors group-hover:text-accent"
+               viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2.2 20.5 7v10L12 21.8 3.5 17V7L12 2.2Zm0 2.31L5.5 8.4v7.2L12 19.49l6.5-3.89V8.4L12 4.51Z"/>
+            <path d="m12 8.2 3.4 2.04v4.07L12 16.35l-3.4-2.04v-4.07L12 8.2Z"/>
           </svg>
-          Read-only
-        </span>
-        {% endif %}
+          <span class="t-display text-body lg:hidden">next_sentry</span>
+        </a>
 
-        <button id="theme-toggle" type="button" data-theme-toggle class="btn btn-icon" title="Switch theme" aria-label="Switch theme">
-          <svg class="theme-icon-dark h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/>
-          </svg>
-          <svg class="theme-icon-light hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-               stroke-linecap="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="4.2"/>
-            <path d="M12 2.6v2.1M12 19.3v2.1M21.4 12h-2.1M4.7 12H2.6M18.65 5.35l-1.5 1.5M6.85 17.15l-1.5 1.5M18.65 18.65l-1.5-1.5M6.85 6.85l-1.5-1.5"/>
-          </svg>
-        </button>
+        <div class="ml-auto flex items-center gap-2 lg:ml-0 lg:flex-col lg:items-center lg:gap-2">
+          {# Read-only is instance-wide, so it needs a marker that survives
+             on every screen — including the desktop rail, where only the
+             glyph fits. #}
+          {% if read_only|default(false) %}
+          <span class="label inline-flex items-center gap-1.5"
+                title="Read-only: creating, deleting and clearing are disabled.">
+            <svg class="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="4" y="10.5" width="16" height="9.5" rx="1.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/>
+            </svg>
+            <span class="max-lg:inline lg:sr-only">Read-only</span>
+          </span>
+          {% endif %}
+
+          <button type="button" data-theme-toggle class="btn btn-icon" title="Switch theme" aria-label="Switch theme">
+            <svg class="theme-icon-dark h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/>
+            </svg>
+            <svg class="theme-icon-light hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4.2"/>
+              <path d="M12 2.6v2.1M12 19.3v2.1M21.4 12h-2.1M4.7 12H2.6M18.65 5.35l-1.5 1.5M6.85 17.15l-1.5 1.5M18.65 18.65l-1.5-1.5M6.85 6.85l-1.5-1.5"/>
+            </svg>
+          </button>
+        </div>
       </div>
-    </nav>
-  </header>
 
-  <!-- 宽度只有这一处定义：页头、正文、页脚三段外壳都是满宽，靠同一组 px 内边距
-       对齐。没有 max-width，也不提供按页覆写的口子 —— 外壳宽度一旦不一致，
-       页头 logo 和页脚刻线就会相对正文左右错位。 -->
-  <main id="main" class="w-full px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
-    {% block content %}{% endblock %}
-  </main>
+      {% block ribbon %}{% endblock %}
+    </aside>
 
-  <footer class="w-full px-4 pb-10 sm:px-6 lg:px-10">
-    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line-soft pt-4 font-mono text-[10px] tracking-wide text-faint">
-      <span>next_sentry</span>
-      <span aria-hidden="true">/</span>
-      <span>SQLite-backed Sentry ingest</span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <main id="main" class="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
+        {% block content %}{% endblock %}
+      </main>
+
+      <footer class="px-4 pb-8 pt-1 sm:px-6 lg:px-10">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line-soft pt-3">
+          <span class="label">next_sentry</span>
+          <span class="label" aria-hidden="true">/</span>
+          <span class="label">SQLite-backed Sentry ingest</span>
+        </div>
+      </footer>
     </div>
-  </footer>
+  </div>
 
   <script>
     const NS_THEME_KEY = 'next-sentry-theme';
@@ -310,7 +104,8 @@
       const isDark = theme === 'dark';
       document.documentElement.classList.toggle('dark', isDark);
       document.querySelectorAll('[data-theme-toggle]').forEach((el) => {
-        // 图标表示"点击后会切到哪个主题"：浅色显示月亮，深色显示太阳
+        // The icon shows where you are going, not where you are: light mode
+        // offers the moon, dark mode offers the sun.
         el.querySelector('.theme-icon-dark')?.classList.toggle('hidden', isDark);
         el.querySelector('.theme-icon-light')?.classList.toggle('hidden', !isDark);
       });
@@ -324,15 +119,15 @@
       }
     });
 
-    // 跨标签页同步主题
+    // Keep every open tab on the same theme.
     window.addEventListener('storage', (e) => {
       if (e.key === NS_THEME_KEY && e.newValue) applyTheme(e.newValue);
     });
 
     applyTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
 
-    /* ── 复制：任意带 data-copy 的按钮 ───────────────────────── */
-    const COPY_ICON = '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="1.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    /* ── Copy: any element carrying data-copy ────────────────────────── */
+    const COPY_ICON = '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="1.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 1 1 2-2h9a2 2 0 1 1 2 2v1"/></svg>';
     const DONE_ICON = '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
     async function copyText(text) {
@@ -342,7 +137,7 @@
           return true;
         }
       } catch (err) {}
-      // 非安全上下文（例如 http:// 内网）回退到 textarea
+      // Fall back for insecure contexts, e.g. a self-hosted http:// origin.
       try {
         const ta = document.createElement('textarea');
         ta.value = text;
@@ -357,7 +152,8 @@
     }
 
     document.addEventListener('click', (e) => {
-      // 捕获阶段拦截：复制按钮常常位于 <summary> 内，不拦截会顺带折叠/展开面板
+      // Capture phase: copy buttons often sit inside <summary>, and letting
+      // the click through would fold the panel the user just opened.
       const btn = e.target.closest('[data-copy]');
       if (!btn) return;
       e.preventDefault();
@@ -376,7 +172,9 @@
       });
     }, true);
 
-    /* ── 相对时间：SQLite CURRENT_TIMESTAMP 为 UTC ──────────── */
+    /* ── Relative time ─────────────────────────────────────────────────
+       SQLite's CURRENT_TIMESTAMP is UTC, so a bare "YYYY-MM-DD HH:MM:SS"
+       is always parsed as UTC here. */
     function toLocalDate(value) {
       if (!value) return null;
       const s = String(value).trim();
@@ -386,6 +184,7 @@
 
     function relativeTime(d) {
       const diff = (Date.now() - d.getTime()) / 1000;
+      if (diff < 0) return 'just now';
       if (diff < 60) return 'just now';
       if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
       if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
@@ -398,8 +197,10 @@
       if (!d) return;
       el.title = d.toLocaleString();
       el.textContent = relativeTime(d);
+      // Screen readers get the same information the tooltip does.
+      el.setAttribute('aria-label', 'at ' + d.toLocaleString());
     });
   </script>
   {% block scripts %}{% endblock %}
-  </body>
+</body>
 </html>

@@ -17,10 +17,12 @@ A lightweight, self-hosted error tracking server compatible with the Sentry SDK 
 
 - 📦 **Drop-in Sentry SDK compatible** — works with any language/framework that supports the Sentry protocol
 - 🗄️ **SQLite-backed** — no Postgres, no Redis, no external services required
-- 🔍 **Event detail view** — stacktrace, tags, extra context, request data
+- 📶 **Severity ribbon** — a live raster of recent events in the rail, so you can see the shape of a failure without reading a single number
+- 🔍 **Event detail view** — stacktrace with the raising frame marked, tags, extra context, request data
 - 🎛️ **Level filtering** — filter events by `error`, `warning`, `info`, `debug`
 - 🌓 **Dark / Light theme** — follows the OS preference, persisted via `localStorage`
 - 📋 **One-click DSN copy** — copy the DSN or the ready-to-paste `sentry_sdk.init(...)` snippet
+- ✈️ **No CDN at runtime** — Tailwind and the fonts are compiled and vendored into `static/`
 - 🐳 **Multi-arch Docker image** — supports `linux/amd64` and `linux/arm64`
 
 ---
@@ -48,6 +50,24 @@ cd next_sentry
 pip install -r requirements.txt
 python app.py
 ```
+
+### Frontend
+
+Tailwind is compiled ahead of time and `static/app.css` is committed, so the
+app itself needs neither Node nor a network connection at runtime. Node is only
+required when you change the UI:
+
+```bash
+npm install
+make build      # rebuild static/app.css, then audit contrast
+```
+
+| Command | What it does |
+| --- | --- |
+| `make css` | Compile `src/app.css` → `static/app.css` |
+| `make fonts` | Re-download the vendored woff2 subsets into `static/fonts/` |
+| `make contrast` | WCAG AA audit of every token pair the UI renders |
+| `make assets` | All of the above |
 
 ---
 
@@ -83,9 +103,17 @@ next_sentry/
 ├── app.py              # Flask application & Sentry ingest endpoints
 ├── database.py         # SQLite initialization & connection helper
 ├── test_report.py      # SDK compatibility test script
+├── src/app.css         # Tailwind entry: tokens + component layer
+├── src/fonts.css       # generated @font-face rules
+├── static/app.css      # built stylesheet (committed)
+├── static/fonts/       # vendored woff2 subsets (committed)
+├── scripts/
+│   ├── fetch-fonts.mjs # downloads the latin subsets
+│   └── check-contrast.mjs
 ├── templates/
-│   ├── base.html       # Base layout, design tokens, theme switcher
-│   ├── index.html      # Project list
+│   ├── base.html       # shell: rail, ribbon slot, theme switcher
+│   ├── _ribbon.html    # the severity ribbon macro
+│   ├── index.html      # Instance readout + project list
 │   ├── project_detail.html
 │   ├── event_detail.html
 │   └── 404.html

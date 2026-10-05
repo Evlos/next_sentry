@@ -1,0 +1,43 @@
+{#
+  The severity ribbon — the console's signature element.
+
+  A raster of recent events, newest first, one tick per event, tick colour
+  is the event's severity. Ticks are a fixed thickness stacked from the
+  top, so the ribbon reads as a comb: a fat block means a quiet channel, a
+  dense comb means a flood, and the comb's shape shows when the trouble
+  was. The free space under it is itself the signal — nothing has come in.
+
+  `events`  newest-first rows, already capped by the view.
+  `project` the project to link ticks to; omit on the index, where each
+            tick resolves to its own project.
+
+  The ribbon is aria-hidden and its ticks are tabindex="-1". It repeats what
+  the event list already says, and 48 focusable links with no text would be a
+  trap for anyone navigating by keyboard. Each tick is still a real link for
+  the mouse, and still announces its level and title on hover.
+#}
+{% macro ribbon(events, project=None) %}
+<div class="px-4 pb-2 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:items-center lg:px-0 lg:pb-3 lg:pt-1">
+  <span class="rail-label label hidden lg:mb-2 lg:block">Signal</span>
+
+  {% if events %}
+  <div class="ribbon lg:w-3" aria-hidden="true">
+    {% for e in events %}
+    <a class="ribbon-tick"
+       href="{{ url_for('event_detail', project_id=(project.id if project else e.project_id), event_db_id=e.id) }}"
+       tabindex="-1"
+       data-level="{{ e.level }}"
+       style="--i: {{ loop.index0 }}"
+       title="{{ e.level }} · {{ e.title or '(no title)' }}"></a>
+    {% endfor %}
+  </div>
+  <span class="rail-label label hidden lg:mt-auto lg:block">{{ events|length }} shown</span>
+  {% else %}
+  {# Quiet reads as a flat baseline rather than a broken rail. #}
+  <div class="ribbon lg:w-3" aria-hidden="true">
+    <span class="ribbon-flat"></span>
+  </div>
+  <span class="rail-label label hidden lg:mt-auto lg:block">nothing yet</span>
+  {% endif %}
+</div>
+{% endmacro %}

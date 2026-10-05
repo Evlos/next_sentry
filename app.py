@@ -16,6 +16,9 @@ app.secret_key = "mini-sentry-secret"
 # ──────────────────────────────────────────────
 READ_ONLY = os.environ.get("READ_ONLY", "false").strip().lower() == "true"
 
+# 级别显示顺序 = 严重程度顺序；UI 里所有级别条都按这个顺序分段。
+LEVEL_ORDER = ["fatal", "error", "warning", "info", "debug"]
+
 def _get_dsn_for_project(project, host: str) -> str:
     """根据 project row 和当前 host 拼出 DSN 字符串"""
     return f"http://{project['dsn_key']}@{host}/api/{project['id']}"
@@ -292,8 +295,33 @@ def index():
         GROUP BY p.id
         ORDER BY p.created_at DESC
     """).fetchall()
+
+    # 左栏信号条：跨所有项目取最近的事件，一条一个刻度。
+    recent = db.execute("""
+        SELECT id, project_id, level, title, created_at
+        FROM events
+        ORDER BY id DESC
+        LIMIT 48
+    """).fetchall()
+
+    # 每个项目的级别构成，用来画列表里的"级别分布"条。
+    mixes = {}
+    for row in db.execute("""
+        SELECT project_id, level, COUNT(*) as n
+        FROM events
+        GROUP BY project_id, level
+    """).fetchall():
+        mixes.setdefault(str(row["project_id"]), {})[row["level"]] = row["n"]
+
     db.close()
-    return render_template("index.html", projects=projects, read_only=READ_ONLY)
+    return render_template(
+        "index.html",
+        projects=projects,
+        recent=recent,
+        mixes=mixes,
+        level_order=LEVEL_ORDER,
+        read_only=READ_ONLY,
+    )
 
 @app.route("/projects/create", methods=["POST"])
 def create_project():
@@ -353,11 +381,23 @@ def event_detail(project_id, event_db_id):
         (event_db_id, project_id)
     ).fetchone()
     project = db.execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
+    # 左栏信号条：同一条事件在所属项目流里的位置。
+    stream = db.execute(
+        "SELECT id, project_id, level, title, created_at FROM events "
+        "WHERE project_id = ? ORDER BY id DESC LIMIT 48",
+        (project_id,)
+    ).fetchall()
     db.close()
     if not event:
         abort(404)
     print(f"[EVENT_DETAIL] event_id={event_db_id} read_only={READ_ONLY}")
-    return render_template("event_detail.html", event=event, project=project, read_only=READ_ONLY)
+    return render_template(
+        "event_detail.html",
+        event=event,
+        project=project,
+        stream=stream,
+        read_only=READ_ONLY,
+    )
 
 @app.errorhandler(404)
 def not_found(e):
