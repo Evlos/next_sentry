@@ -1,0 +1,29 @@
+# The image only needs app.py, database.py, templates/ and static/.
+# Without this, `COPY . .` pulls the whole working directory in — including
+# the 18M node_modules and the local .venv — and the resulting image ships
+# a build toolchain and a virtualenv it never uses.
+
+# VCS and CI
+.git
+.github
+.gitignore
+
+# Local virtualenvs and the Node build toolchain (build-time only)
+.venv
+node_modules
+
+# Python bytecode
+__pycache__
+*.py[cod]
+
+# The database is a runtime mount point (-v $(pwd)/data:/app/data).
+# Baking it in would also ship the DSN keys.
+data
+*.db
+
+# Local scratch
+.envrc
+shell.nix
+exportplan.md
+*.xml
+.DS_Store
